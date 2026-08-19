@@ -1,0 +1,26 @@
+# Render.com Infrastructure Blueprint
+services:
+  - type: web
+    name: sovereign-survival-agent
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: BASE_RPC_URL
+        value: https://sepolia.base.org
+      - key: AGENT_PRIVATE_KEY
+        sync: false
+      - key: AGENT_SESSION_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

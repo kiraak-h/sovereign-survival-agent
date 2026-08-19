@@ -1,0 +1,17 @@
+{
+  "network": "Base Sepolia Testnet",
+  "chain_id": 84532,
+  "status": "DEPLOYED_LIVE_ON_CHAIN",
+  "contract_name": "AgentPolicyGuard",
+  "contract_address": "0x0aF732eEB4994CB4C9916b4Eb2903d89739fE8de",
+  "owner_address": "0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA",
+  "session_key_address": "0x97F88CA501AF4A75C9F8fd8C56d230a43e407134",
+  "daily_limit_eth": 0.05,
+  "whitelisted_usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  "tx_hash": "0x667a9612d6faf55c31df506f8886cb8659058d43c2bc51b8ab253fa3f6a70efb",
+  "block_number": 45679245,
+  "gas_used": 1149573,
+  "basescan_url": "https://sepolia.basescan.org/address/0x0aF732eEB4994CB4C9916b4Eb2903d89739fE8de",
+  "tx_basescan_url": "https://sepolia.basescan.org/tx/0x667a9612d6faf55c31df506f8886cb8659058d43c2bc51b8ab253fa3f6a70efb",
+  "deployed_at": "2026-08-19T08:06:21Z"
+}

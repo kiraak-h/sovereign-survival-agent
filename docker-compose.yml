@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  sovereign-agent:
+    build: .
+    container_name: sovereign_survival_agent
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.agent
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      - ./deployments:/app/deployments
