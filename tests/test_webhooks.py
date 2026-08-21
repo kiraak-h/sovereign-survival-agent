@@ -6,28 +6,6 @@ import pytest
 from channels.multi_platform_webhooks import MultiPlatformWebhookHandler
 
 
-def test_polar_webhook_processing():
-    handler = MultiPlatformWebhookHandler()
-    payload = {
-        "type": "pledge.created",
-        "data": {
-            "issue": {
-                "number": 42,
-                "repository": {
-                    "name": "staking-vault",
-                    "organization": {"name": "calcom"}
-                }
-            },
-            "pledge": {"amount": 7500}  # $75.00
-        }
-    }
-
-    res = handler.process_polar_webhook(payload)
-    assert res.accepted is True
-    assert res.reward_usdc == 75.0
-    assert "calcom/staking-vault#42" in res.target
-
-
 def test_gitcoin_webhook_processing():
     handler = MultiPlatformWebhookHandler()
     payload = {

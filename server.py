@@ -352,16 +352,8 @@ def get_network_details():
     return get_active_network().model_dump(mode="json")
 
 
-@app.post("/v1/webhooks/polar", summary="Polar.sh Bounty/Funding Webhook")
-def receive_polar_webhook(payload: Dict[str, Any]):
-    """Receives live pledge and issue funding notifications from Polar.sh."""
-    result = _webhook_handler.process_polar_webhook(payload)
-    if result.accepted:
-        _notifier.dispatch_alert("🎯 Polar.sh Bounty Received", f"{result.target}: ${result.reward_usdc:.2f} USDC", level="INFO")
-    return result.model_dump(mode="json")
-
-
 @app.post("/v1/webhooks/gitcoin", summary="Gitcoin Grant/Bounty Webhook")
+
 def receive_gitcoin_webhook(payload: Dict[str, Any]):
     """Receives Gitcoin Web3 bounty creation events."""
     result = _webhook_handler.process_gitcoin_webhook(payload)
