@@ -7,13 +7,23 @@ and robust startup error logging.
 import os
 import sys
 import traceback
+from pathlib import Path
+from dotenv import load_dotenv
 
 # Ensure working directory is in python path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+# Load .env.agent credentials
+env_file = Path(BASE_DIR) / ".env.agent"
+if env_file.exists():
+    load_dotenv(dotenv_path=env_file)
+else:
+    load_dotenv()
+
 import uvicorn
+
 
 def main():
     print("=" * 60)
