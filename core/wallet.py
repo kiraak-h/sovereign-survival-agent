@@ -38,23 +38,44 @@ class SovereignWallet:
         self.w3 = Web3(Web3.HTTPProvider(self.rpc_url))
 
         # Initialize or derive agent account from environment or parameter
-        pk = private_key or os.getenv("AGENT_PRIVATE_KEY")
-        sk = os.getenv("AGENT_SESSION_KEY")
+        raw_pk = private_key or os.getenv("AGENT_PRIVATE_KEY")
+        raw_sk = os.getenv("AGENT_SESSION_KEY")
+
+        pk = self._sanitize_key(raw_pk)
+        sk = self._sanitize_key(raw_sk)
 
         if pk:
-            self._account = Account.from_key(pk)
+            try:
+                self._account = Account.from_key(pk)
+            except Exception:
+                self._account = Account.from_key("0x" + secrets.token_hex(32))
         else:
             self._account = Account.from_key("0x" + secrets.token_hex(32))
 
         # Scoped Session Key for tool operations
         if sk:
-            self._session_key = Account.from_key(sk)
+            try:
+                self._session_key = Account.from_key(sk)
+            except Exception:
+                self._session_key = Account.from_key("0x" + secrets.token_hex(32))
         else:
             self._session_key = Account.from_key("0x" + secrets.token_hex(32))
 
         # Sync state addresses
         self.state.agent_address = self._account.address
         self.state.session_key_address = self._session_key.address
+
+    def _sanitize_key(self, key_str: str | None) -> str | None:
+        """Cleans and validates EVM private keys, removing quotes and spaces."""
+        if not key_str:
+            return None
+        cleaned = key_str.strip("'\" \t\r\n")
+        if not cleaned:
+            return None
+        if not cleaned.startswith("0x"):
+            cleaned = f"0x{cleaned}"
+        return cleaned
+
 
         # Anti-Drain Policy Configuration
         self.daily_spend_limit_usdc = daily_spend_limit_usdc

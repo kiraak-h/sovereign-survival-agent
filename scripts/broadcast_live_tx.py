@@ -45,21 +45,42 @@ def get_connected_w3() -> tuple[Web3, str]:
 def get_or_create_agent_wallet() -> tuple[Account, Account, str]:
     """Retrieves or creates a persistent testnet wallet for the agent."""
     env_file = Path(".env.agent")
-    private_key = os.getenv("AGENT_PRIVATE_KEY")
-    session_key = os.getenv("AGENT_SESSION_KEY")
+    raw_pk = os.getenv("AGENT_PRIVATE_KEY")
+    raw_sk = os.getenv("AGENT_SESSION_KEY")
+
+    private_key = raw_pk.strip("'\" \t\r\n") if raw_pk else None
+    if private_key and not private_key.startswith("0x"):
+        private_key = f"0x{private_key}"
+
+    session_key = raw_sk.strip("'\" \t\r\n") if raw_sk else None
+    if session_key and not session_key.startswith("0x"):
+        session_key = f"0x{session_key}"
 
     if not private_key:
         private_key = "0x" + secrets.token_hex(32)
         session_key = "0x" + secrets.token_hex(32)
-        with open(env_file, "w", encoding="utf-8") as f:
-            f.write(f"# Sovereign Agent Testnet Credentials\n")
-            f.write(f"AGENT_PRIVATE_KEY={private_key}\n")
-            f.write(f"AGENT_SESSION_KEY={session_key}\n")
-            f.write(f"BASE_RPC_URL={BASE_SEPOLIA_RPCS[0]}\n")
+        try:
+            with open(env_file, "w", encoding="utf-8") as f:
+                f.write(f"# Sovereign Agent Testnet Credentials\n")
+                f.write(f"AGENT_PRIVATE_KEY={private_key}\n")
+                f.write(f"AGENT_SESSION_KEY={session_key}\n")
+                f.write(f"BASE_RPC_URL={BASE_SEPOLIA_RPCS[0]}\n")
+        except Exception:
+            pass
 
-    account = Account.from_key(private_key)
-    session_acc = Account.from_key(session_key)
+    try:
+        account = Account.from_key(private_key)
+    except Exception:
+        private_key = "0x" + secrets.token_hex(32)
+        account = Account.from_key(private_key)
+
+    try:
+        session_acc = Account.from_key(session_key or private_key)
+    except Exception:
+        session_acc = Account.from_key("0x" + secrets.token_hex(32))
+
     return account, session_acc, private_key
+
 
 
 def check_status_and_deploy():
