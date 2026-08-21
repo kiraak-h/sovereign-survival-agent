@@ -106,8 +106,11 @@ _telegram_service = TelegramBotService(
     daemon=_daemon,
     scanner=_bounty_scanner,
     solver=_self_correcting_solver,
-    github_solver=_github_solver
+    github_solver=_github_solver,
+    static_analyzer=_static_analyzer,
+    eas_manager=_eas_manager
 )
+
 
 @app.on_event("startup")
 def on_startup():
