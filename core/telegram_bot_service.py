@@ -90,11 +90,33 @@ class TelegramBotService:
                 "• <b>/scan</b> - Scan top live GitHub/Algora paid bounties\n"
                 "• <b>/solve &lt;url&gt;</b> - Solve a specific GitHub issue\n"
                 "• <b>/tick</b> - Force an immediate metabolic & solve cycle\n"
+                "• <b>/digest</b> - Structured performance & earnings summary\n"
                 "• <b>/daemon start</b> - Turn ON 24/7 background autopilot\n"
                 "• <b>/daemon stop</b> - Pause 24/7 background autopilot\n"
                 "• <b>/status</b> - View daemon and worker status"
             )
             self.send_message(msg, chat_id)
+
+        elif command == "/digest":
+            if not self.metabolism:
+                self.send_message("❌ Metabolism manager not attached.", chat_id)
+                return
+            state = self.metabolism.state
+            daemon_st = self.daemon.get_status() if self.daemon else None
+            msg = (
+                "📊 <b>24/7 Autonomous Performance Digest</b>\n\n"
+                f"• <b>Financial Status:</b> {state.urgency_tier.value} (${state.treasury_usdc:.2f} USDC)\n"
+                f"• <b>Gas Reserve:</b> {state.treasury_eth:.4f} ETH\n"
+                f"• <b>Survival Runway:</b> {state.runway_hours:.1f} Hours\n"
+                f"• <b>Daemon Ticks:</b> {daemon_st.total_ticks_completed if daemon_st else 0}\n"
+                f"• <b>Bounties Scanned:</b> {daemon_st.bounties_scanned if daemon_st else 0}\n"
+                f"• <b>PRs Merged & Solved:</b> {daemon_st.bounties_solved if daemon_st else 0}\n"
+                f"• <b>Cumulative Revenue:</b> +${state.total_revenue_earned:.2f} USDC\n"
+                f"• <b>Net Treasury Profit:</b> +${max(0.0, state.total_revenue_earned - state.total_burn_cost):.2f} USDC\n\n"
+                "<i>Agent is operating 24/7 in the cloud.</i>"
+            )
+            self.send_message(msg, chat_id)
+
 
         elif command == "/vitals":
             if not self.metabolism:

@@ -49,8 +49,11 @@ from channels.service_oracle import ServiceOracle
 from channels.bounty_hunter import BountyHunter
 from channels.subcontracting_engine import A2ASubcontractingEngine
 from channels.github_bounty_scanner import GitHubBountyScanner, ScannedBounty
+from channels.social_broadcaster import SocialMarketingBroadcaster, SocialPostResult
+from channels.multi_platform_webhooks import MultiPlatformWebhookHandler, WebhookEventResponse
 from simulation.market_simulator import MarketSimulator
 from scripts.broadcast_live_tx import check_status_and_deploy, get_connected_w3, BASE_SEPOLIA_USDC
+
 
 
 app = FastAPI(
@@ -83,6 +86,8 @@ _self_correcting_solver = SelfCorrectingSolver(agent_address=_agent_state.agent_
 _github_solver = GitHubSolverEngine(agent_address=_agent_state.agent_address)
 _eas_manager = EASAttestationManager(agent_address=_agent_state.agent_address)
 _notifier = AgentNotifier()
+_social_broadcaster = SocialMarketingBroadcaster()
+_webhook_handler = MultiPlatformWebhookHandler()
 _daemon = AutonomousDaemon(
     metabolism=_metabolism,
     policy=_policy,
@@ -92,6 +97,7 @@ _daemon = AutonomousDaemon(
     notifier=_notifier,
     interval_seconds=300
 )
+
 
 from core.telegram_bot_service import TelegramBotService
 
@@ -338,7 +344,43 @@ def get_financial_ledger(limit: int = 20):
     }
 
 
+from core.network_config import get_active_network
+
+@app.get("/v1/network/active", summary="Get active network specification (Base Sepolia vs Base Mainnet)")
+def get_network_details():
+    """Returns the currently active Base L2 network specification."""
+    return get_active_network().model_dump(mode="json")
+
+
+@app.post("/v1/webhooks/polar", summary="Polar.sh Bounty/Funding Webhook")
+def receive_polar_webhook(payload: Dict[str, Any]):
+    """Receives live pledge and issue funding notifications from Polar.sh."""
+    result = _webhook_handler.process_polar_webhook(payload)
+    if result.accepted:
+        _notifier.dispatch_alert("🎯 Polar.sh Bounty Received", f"{result.target}: ${result.reward_usdc:.2f} USDC", level="INFO")
+    return result.model_dump(mode="json")
+
+
+@app.post("/v1/webhooks/gitcoin", summary="Gitcoin Grant/Bounty Webhook")
+def receive_gitcoin_webhook(payload: Dict[str, Any]):
+    """Receives Gitcoin Web3 bounty creation events."""
+    result = _webhook_handler.process_gitcoin_webhook(payload)
+    if result.accepted:
+        _notifier.dispatch_alert("🎯 Gitcoin Bounty Received", f"{result.target}: ${result.reward_usdc:.2f} USDC", level="INFO")
+    return result.model_dump(mode="json")
+
+
+@app.post("/v1/webhooks/bountycaster", summary="Bountycaster Farcaster Webhook")
+def receive_bountycaster_webhook(payload: Dict[str, Any]):
+    """Receives Bountycaster on-chain bounty casts."""
+    result = _webhook_handler.process_bountycaster_webhook(payload)
+    if result.accepted:
+        _notifier.dispatch_alert("🎯 Bountycaster Cast Received", f"${result.reward_usdc:.2f} USDC on-chain reward", level="INFO")
+    return result.model_dump(mode="json")
+
+
 @app.post("/v1/broadcast-onchain", summary="Broadcast live transaction to Base Sepolia L2")
+
 def broadcast_onchain():
     """Runs live on-chain status check, gas verification, and transaction broadcast on Base Sepolia."""
     result = check_status_and_deploy()

@@ -65,18 +65,6 @@ class SovereignWallet:
         self.state.agent_address = self._account.address
         self.state.session_key_address = self._session_key.address
 
-    def _sanitize_key(self, key_str: str | None) -> str | None:
-        """Cleans and validates EVM private keys, removing quotes and spaces."""
-        if not key_str:
-            return None
-        cleaned = key_str.strip("'\" \t\r\n")
-        if not cleaned:
-            return None
-        if not cleaned.startswith("0x"):
-            cleaned = f"0x{cleaned}"
-        return cleaned
-
-
         # Anti-Drain Policy Configuration
         self.daily_spend_limit_usdc = daily_spend_limit_usdc
         self.max_spend_per_tx_usdc = max_spend_per_tx_usdc
@@ -90,6 +78,18 @@ class SovereignWallet:
             "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913".lower(),  # Base Mainnet USDC
             "0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24".lower(),  # Uniswap V3 Base SwapRouter
         }
+
+    def _sanitize_key(self, key_str: str | None) -> str | None:
+        """Cleans and validates EVM private keys, removing quotes and spaces."""
+        if not key_str:
+            return None
+        cleaned = key_str.strip("'\" \t\r\n")
+        if not cleaned:
+            return None
+        if not cleaned.startswith("0x"):
+            cleaned = f"0x{cleaned}"
+        return cleaned
+
 
     @property
     def address(self) -> str:

@@ -1,0 +1,8 @@
+{
+  "public_url": "http://localhost:8000",
+  "port": 8000,
+  "is_public": false,
+  "audit_endpoint": "http://localhost:8000/v1/audit/smart-contract",
+  "console_url": "http://localhost:8000/console",
+  "updated_at": "2026-08-21T10:52:15Z"
+}
