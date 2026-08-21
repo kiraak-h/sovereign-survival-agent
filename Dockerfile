@@ -18,19 +18,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install solc 0.8.20 static binary
-RUN curl -L -o /usr/local/bin/solc https://github.com/ethereum/solidity/releases/download/v0.8.20/solc-static-linux \
-    && chmod +x /usr/local/bin/solc
-
 # Copy requirements and install python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-install solc 0.8.20 during build so container starts instantly
+RUN python -c "import solcx; solcx.install_solc('0.8.20')" || true
+
 # Copy application source code
 COPY . .
 
-# Expose default port
+# Expose default ports
 EXPOSE 8000 10000
 
-# Run FastAPI server with uvicorn respecting Render's dynamic $PORT
-CMD ["sh", "-c", "python -m uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Run entrypoint script with comprehensive error handling and dynamic $PORT support
+CMD ["python", "start.py"]
