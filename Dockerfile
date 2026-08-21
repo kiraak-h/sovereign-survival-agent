@@ -9,7 +9,7 @@ ENV PYTHONUNBUFFERED=1 \
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies, Node.js (for JS/TS sandbox), and curl
+# Install system dependencies, Node.js, and curl
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install solc 0.8.20 binary
+# Install solc 0.8.20 static binary
 RUN curl -L -o /usr/local/bin/solc https://github.com/ethereum/solidity/releases/download/v0.8.20/solc-static-linux \
     && chmod +x /usr/local/bin/solc
 
@@ -29,8 +29,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application source code
 COPY . .
 
-# Expose API and Cockpit port
-EXPOSE 8000
+# Expose default port
+EXPOSE 8000 10000
 
-# Run FastAPI server with uvicorn
-CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run FastAPI server with uvicorn respecting Render's dynamic $PORT
+CMD ["sh", "-c", "python -m uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000}"]
