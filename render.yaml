@@ -1,4 +1,4 @@
-# Render.com Infrastructure Blueprint
+# Render.com Infrastructure Blueprint (Base Mainnet Production)
 services:
   - type: web
     name: sovereign-survival-agent
@@ -10,8 +10,12 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: NETWORK_MODE
+        value: BASE_MAINNET
       - key: BASE_RPC_URL
-        value: https://sepolia.base.org
+        value: https://mainnet.base.org
+      - key: POLICY_GUARD_MAINNET
+        value: "0x9c59FdB0153325af6d28164832C224C1DE12e4A5"
       - key: AGENT_PRIVATE_KEY
         sync: false
       - key: AGENT_SESSION_KEY

@@ -64,7 +64,8 @@ NETWORKS: Dict[NetworkMode, NetworkSpecs] = {
 
 def get_active_network() -> NetworkSpecs:
     """Returns currently active network based on NETWORK_MODE env variable."""
-    mode_str = os.getenv("NETWORK_MODE", "BASE_SEPOLIA").upper()
-    if mode_str == "BASE_MAINNET" or mode_str == "MAINNET":
-        return NETWORKS[NetworkMode.BASE_MAINNET]
-    return NETWORKS[NetworkMode.BASE_SEPOLIA]
+    mode_str = os.getenv("NETWORK_MODE", "BASE_MAINNET").upper()
+    if mode_str in ("BASE_SEPOLIA", "SEPOLIA", "TESTNET"):
+        return NETWORKS[NetworkMode.BASE_SEPOLIA]
+    return NETWORKS[NetworkMode.BASE_MAINNET]
+
