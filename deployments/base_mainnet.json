@@ -1,0 +1,13 @@
+{
+  "network": "Base Mainnet",
+  "chain_id": 8453,
+  "contract_address": "0x9c59FdB0153325af6d28164832C224C1DE12e4A5",
+  "tx_hash": "0xf6bbdd8d28567ce5cfac05253df75413295010ed492d1d2f69630764d0f711cf",
+  "block_number": 50304736,
+  "master_address": "0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA",
+  "session_key_address": "0x97F88CA501AF4A75C9F8fd8C56d230a43e407134",
+  "daily_limit_eth": 0.05,
+  "max_spend_per_tx_eth": 0.01,
+  "basescan_url": "https://basescan.org/address/0x9c59FdB0153325af6d28164832C224C1DE12e4A5",
+  "tx_url": "https://basescan.org/tx/0xf6bbdd8d28567ce5cfac05253df75413295010ed492d1d2f69630764d0f711cf"
+}

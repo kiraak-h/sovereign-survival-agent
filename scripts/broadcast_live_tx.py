@@ -19,7 +19,9 @@ env_path = Path(".env.agent")
 if env_path.exists():
     load_dotenv(dotenv_path=env_path)
 
-# Base Sepolia RPC Endpoints (with automated fallback)
+from core.network_config import get_active_network
+
+# Base Network Constants
 BASE_SEPOLIA_CHAIN_ID = 84532
 BASE_SEPOLIA_RPCS = [
     "https://sepolia.base.org",
@@ -31,15 +33,17 @@ BASE_SEPOLIA_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
 
 
 def get_connected_w3() -> tuple[Web3, str]:
-    """Tries multiple Base Sepolia RPC endpoints until a working connection is established."""
-    for rpc in BASE_SEPOLIA_RPCS:
+    """Tries multiple RPC endpoints for the active network until a working connection is established."""
+    net = get_active_network()
+    for rpc in net.rpc_urls:
         try:
             w3 = Web3(Web3.HTTPProvider(rpc, request_kwargs={"timeout": 6}))
             if w3.is_connected():
                 return w3, rpc
         except Exception:
             continue
-    return Web3(Web3.HTTPProvider(BASE_SEPOLIA_RPCS[0])), BASE_SEPOLIA_RPCS[0]
+    return Web3(Web3.HTTPProvider(net.rpc_urls[0])), net.rpc_urls[0]
+
 
 
 def get_or_create_agent_wallet() -> tuple[Account, Account, str]:

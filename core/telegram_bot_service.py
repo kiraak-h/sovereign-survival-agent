@@ -186,21 +186,26 @@ class TelegramBotService:
                 self.send_message("❌ Metabolism manager not attached.", chat_id)
                 return
             state = self.metabolism.state
+            from core.network_config import get_active_network
+            active_net = get_active_network()
+            
             gas_warning = ""
-            if state.treasury_eth < 0.005:
+            if state.treasury_eth < 0.001:
                 gas_warning = "\n⚠️ <b>[LOW GAS WARNING]</b> ETH is low! Fund gas to keep transactions running."
             msg = (
-                f"🧬 <b>Agent Vitals (Base L2)</b>\n\n"
+                f"🧬 <b>Agent Vitals ({active_net.name})</b>\n\n"
                 f"• <b>Status:</b> {'🟢 ALIVE' if state.is_alive else '💀 INSOLVENT'}\n"
+                f"• <b>Mode:</b> {'💎 Production (Real Money)' if active_net.is_production else '🧪 Testnet'}\n"
                 f"• <b>Tier:</b> {state.urgency_tier.value}\n"
                 f"• <b>Treasury USDC:</b> ${state.treasury_usdc:.4f} USDC\n"
                 f"• <b>Gas Balance:</b> {state.treasury_eth:.4f} ETH\n"
                 f"• <b>Runway:</b> {state.runway_hours:.1f} Hours\n"
                 f"• <b>Hourly Burn:</b> ${self.metabolism.get_hourly_burn_velocity():.4f}/hr\n"
                 f"• <b>Total Claimed:</b> +${state.total_revenue_earned:.2f} USDC{gas_warning}\n\n"
-                f"🔗 <a href='https://sepolia.basescan.org/address/{state.agent_address}'>View on BaseScan ↗</a>"
+                f"🔗 <a href='{active_net.explorer_url}/address/{state.agent_address}'>View on BaseScan ↗</a>"
             )
             self.send_message(msg, chat_id)
+
 
         elif command == "/scan":
             if not self.scanner:

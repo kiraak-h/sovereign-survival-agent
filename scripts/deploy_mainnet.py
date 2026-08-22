@@ -6,13 +6,21 @@ enforcing daily spend caps on real ETH/USDC and generating live BaseScan records
 """
 from __future__ import annotations
 import os
+import sys
 import json
 import solcx
 from pathlib import Path
+
+# Add project root to sys.path
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 from eth_account import Account
 from web3 import Web3
 from core.network_config import NETWORKS, NetworkMode
 from scripts.broadcast_live_tx import get_or_create_agent_wallet
+
 
 
 def deploy_to_base_mainnet():
@@ -69,14 +77,20 @@ def deploy_to_base_mainnet():
     # 4. Deploy Contract
     contract = w3.eth.contract(abi=abi, bytecode=bytecode)
     daily_limit_wei = w3.to_wei(0.05, "ether")
+    max_spend_per_tx_wei = w3.to_wei(0.01, "ether")
     nonce = w3.eth.get_transaction_count(account.address)
 
-    tx = contract.constructor(session_account.address, daily_limit_wei).build_transaction({
+    tx = contract.constructor(
+        session_account.address,
+        daily_limit_wei,
+        max_spend_per_tx_wei
+    ).build_transaction({
         "from": account.address,
         "nonce": nonce,
         "gasPrice": int(w3.eth.gas_price * 1.2),
         "chainId": 8453
     })
+
 
     signed = w3.eth.account.sign_transaction(tx, pk)
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
@@ -84,7 +98,7 @@ def deploy_to_base_mainnet():
 
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
     deployed_address = receipt.contractAddress
-    print(f"[🎉] AgentPolicyGuard Deployed on Base Mainnet: {deployed_address}")
+    print(f"[SUCCESS] AgentPolicyGuard Deployed on Base Mainnet: {deployed_address}")
     print(f"    View on BaseScan: https://basescan.org/address/{deployed_address}")
 
     # Save to deployments manifest
@@ -100,7 +114,9 @@ def deploy_to_base_mainnet():
             "master_address": account.address,
             "session_key_address": session_account.address,
             "daily_limit_eth": 0.05,
-            "basescan_url": f"https://basescan.org/address/{deployed_address}"
+            "max_spend_per_tx_eth": 0.01,
+            "basescan_url": f"https://basescan.org/address/{deployed_address}",
+            "tx_url": f"https://basescan.org/tx/0x{tx_hash.hex()}"
         }, f, indent=2)
 
     return {
@@ -109,6 +125,7 @@ def deploy_to_base_mainnet():
         "tx_hash": f"0x{tx_hash.hex()}",
         "basescan_url": f"https://basescan.org/address/{deployed_address}"
     }
+
 
 
 if __name__ == "__main__":

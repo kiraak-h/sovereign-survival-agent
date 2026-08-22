@@ -173,16 +173,20 @@ def get_agent_vitals():
     # Query live on-chain Base Sepolia USDC balance
     live_onchain_usdc = _usdc_client.get_onchain_balance(_agent_state.agent_address)
 
+    # Query active network
+    active_net = get_active_network()
+
     return {
         "agent_address": _agent_state.agent_address,
         "session_key": _agent_state.session_key_address,
-        "network": "Base Sepolia L2 (84532)",
+        "network": f"{active_net.name} ({active_net.chain_id})",
+        "is_production": active_net.is_production,
         "is_alive": _agent_state.is_alive,
         "treasury_usdc": round(_agent_state.treasury_usdc, 4),
         "gas_eth": round(_agent_state.treasury_eth, 6),
         "live_onchain_eth": round(live_onchain_eth, 6),
         "live_onchain_usdc": round(live_onchain_usdc, 6),
-        "usdc_contract_address": BASE_SEPOLIA_USDC,
+        "usdc_contract_address": active_net.usdc_address,
         "urgency_tier": _agent_state.urgency_tier.value,
         "runway_hours": _agent_state.runway_hours,
         "hourly_burn_velocity_usdc": round(_metabolism.get_hourly_burn_velocity(), 4),
@@ -192,8 +196,9 @@ def get_agent_vitals():
         "total_revenue_earned": round(_agent_state.total_revenue_earned, 4),
         "total_burn_cost": round(_agent_state.total_burn_cost, 4),
         "cumulative_profit": round(_agent_state.total_revenue_earned - _agent_state.total_burn_cost, 4),
-        "basescan_url": f"https://sepolia.basescan.org/address/{_agent_state.agent_address}"
+        "basescan_url": f"{active_net.explorer_url}/address/{_agent_state.agent_address}"
     }
+
 
 
 @app.get("/v1/daemon/status", summary="Get 24/7 Autonomous Daemon status")
