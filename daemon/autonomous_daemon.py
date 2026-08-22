@@ -119,9 +119,10 @@ class AutonomousDaemon:
             reward_usdc=target.reward_usdc,
             deadline_ticks=30,
             difficulty_score=target.difficulty_score,
-            issuer_address="0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
-            escrow_address="0x_escrow_base"
+            issuer_address="0x0000000000000000000000000000000000000000",
+            escrow_address="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
         )
+
 
         # 6. Execute Closed-Loop Verification
         result = self.solver.solve_with_verification(

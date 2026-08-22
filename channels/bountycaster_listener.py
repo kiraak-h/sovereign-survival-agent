@@ -1,7 +1,7 @@
 # sovereign-survival-agent/channels/bountycaster_listener.py
 """
 Live Bountycaster & Decentralized Task Board Listener:
-Queries Bountycaster (Farcaster), Gitcoin, and on-chain escrow registries for live bounties,
+Queries Bountycaster (Farcaster) and open bounty endpoints for live on-chain tasks,
 parses GitHub issue URLs, rewards (USDC/ETH), deadlines, and feeds solvable tasks to the solver.
 """
 from __future__ import annotations
@@ -30,7 +30,7 @@ class BountycasterItem(BaseModel):
 class BountycasterListener:
     """
     Monitors live decentralized bounty feeds.
-    Supports real Bountycaster REST API and fallback mock feeds for offline development.
+    Connects directly to Bountycaster API.
     """
 
     BOUNTYCASTER_API_URL = "https://api.bountycaster.xyz/v1/bounties/open"
@@ -46,7 +46,6 @@ class BountycasterListener:
         Fetches open bounties from Bountycaster and converts them into standardized Bounty objects.
         """
         try:
-            # Attempt live Bountycaster API query
             response = self.session.get(
                 self.BOUNTYCASTER_API_URL,
                 params={"status": "open", "limit": limit},
@@ -56,10 +55,9 @@ class BountycasterListener:
                 raw_items = response.json().get("bounties", [])
                 return self._parse_api_response(raw_items, min_reward_usdc)
         except Exception:
-            # Fallback to structured live-like feed if network/API key unavailable
             pass
 
-        return self._get_fallback_live_feed(min_reward_usdc)
+        return []
 
     def _parse_api_response(self, raw_items: List[Dict[str, Any]], min_reward: float) -> List[Bounty]:
         """Parses raw JSON from Bountycaster into strongly-typed Bounty models."""
@@ -84,7 +82,7 @@ class BountycasterListener:
                     deadline_ticks=20,
                     difficulty_score=difficulty,
                     issuer_address=item.get("author_address", "0x0000000000000000000000000000000000000000"),
-                    escrow_address="0x_bountycaster_escrow_base"
+                    escrow_address="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
                 )
             )
         return bounties
@@ -97,57 +95,11 @@ class BountycasterListener:
     def _classify_task(self, text: str) -> TaskType:
         """Classifies bounty text into specific actionable task categories."""
         lower = text.lower()
-        if "test" in lower or "pytest" in lower or "unit test" in lower:
-            return TaskType.UNIT_TEST_GEN
-        elif "bug" in lower or "fix" in lower or "patch" in lower:
-            return TaskType.CODE_BUG_FIX
-        elif "audit" in lower or "security" in lower or "reentrancy" in lower:
+        if any(k in lower for k in ["audit", "security", "reentrancy", "vulnerability", "solidity"]):
             return TaskType.SMART_CONTRACT_AUDIT
-        elif "research" in lower or "mev" in lower or "analysis" in lower:
+        elif any(k in lower for k in ["test", "pytest", "unit test", "coverage", "fuzz"]):
+            return TaskType.UNIT_TEST_GEN
+        elif any(k in lower for k in ["research", "analysis", "mev", "report"]):
             return TaskType.MARKET_INTELLIGENCE
         return TaskType.CODE_BUG_FIX
 
-    def _get_fallback_live_feed(self, min_reward: float) -> List[Bounty]:
-        """High-signal live mock bounties formatted identically to real Bountycaster casts."""
-        mock_casts = [
-            {
-                "id": "bc_live_01",
-                "title": "Fix Reentrancy Guard in Base L2 Staking Contract",
-                "text": "Bounty for fixing reentrancy issue: https://github.com/base-org/sample-vault/issues/42",
-                "task_type": TaskType.SMART_CONTRACT_AUDIT,
-                "amount": 75.0,
-                "difficulty": 0.55
-            },
-            {
-                "id": "bc_live_02",
-                "title": "Generate Pytest Suite for ERC-4337 Session Key Bundler",
-                "text": "Need 95%+ coverage on bundler: https://github.com/eth-infinitism/bundler/issues/108",
-                "task_type": TaskType.UNIT_TEST_GEN,
-                "amount": 50.0,
-                "difficulty": 0.40
-            },
-            {
-                "id": "bc_live_03",
-                "title": "Optimize Opcode Gas on Uniswap V3 Routing Hook",
-                "text": "Gas optimization task: https://github.com/uniswap/v3-periphery/issues/89",
-                "task_type": TaskType.CODE_BUG_FIX,
-                "amount": 120.0,
-                "difficulty": 0.70
-            }
-        ]
-
-        return [
-            Bounty(
-                bounty_id=c["id"],
-                title=c["title"],
-                description=c["text"],
-                task_type=c["task_type"],
-                reward_usdc=c["amount"],
-                deadline_ticks=25,
-                difficulty_score=c["difficulty"],
-                issuer_address="0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
-                escrow_address="0x_bountycaster_base_escrow"
-            )
-            for c in mock_casts
-            if c["amount"] >= min_reward
-        ]
