@@ -236,19 +236,20 @@ class GitHubBountyScanner:
 
     def _extract_reward_amount(self, text: str) -> float:
         """Extracts dollar amounts from text using regular expressions."""
-        match_usd = re.search(r"\$\s*([0-9]+(?:\.[0-9]{2})?)", text)
+        match_usd = re.search(r"\$\s*([0-9]+(?:\.[0-9]{1,2})?)", text)
         if match_usd:
             return float(match_usd.group(1))
 
-        match_usdc = re.search(r"([0-9]+(?:\.[0-9]{2})?)\s*(?:USDC|USD|DAI)", text, re.IGNORECASE)
+        match_usdc = re.search(r"([0-9]+(?:\.[0-9]{1,2})?)\s*(?:USDC|USD|DAI|USDT)", text, re.IGNORECASE)
         if match_usdc:
             return float(match_usdc.group(1))
 
-        match_eth = re.search(r"([0-9]+(?:\.[0-9]{3,})?)\s*ETH", text, re.IGNORECASE)
+        match_eth = re.search(r"([0-9]+(?:\.[0-9]{2,})?)\s*ETH", text, re.IGNORECASE)
         if match_eth:
             return round(float(match_eth.group(1)) * 2500.0, 2)
 
         return 0.0
+
 
     def _classify_task(self, text: str) -> TaskType:
         """Classifies text into supported agent task types."""
