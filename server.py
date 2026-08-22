@@ -82,12 +82,20 @@ _usdc_client = BaseSepoliaUSDCClient()
 _bounty_scanner = GitHubBountyScanner()
 _llm_gateway = LLMGateway(metabolism=_metabolism)
 
+from channels.automated_contract_auditor import AutomatedContractAuditor
+
 _self_correcting_solver = SelfCorrectingSolver(agent_address=_agent_state.agent_address, llm_gateway=_llm_gateway)
 _github_solver = GitHubSolverEngine(agent_address=_agent_state.agent_address)
 _eas_manager = EASAttestationManager(agent_address=_agent_state.agent_address)
 _notifier = AgentNotifier()
 _social_broadcaster = SocialMarketingBroadcaster()
 _webhook_handler = MultiPlatformWebhookHandler()
+_auditor = AutomatedContractAuditor(
+    static_analyzer=_static_analyzer,
+    eas_manager=_eas_manager,
+    notifier=_notifier
+)
+
 _daemon = AutonomousDaemon(
     metabolism=_metabolism,
     policy=_policy,
@@ -95,6 +103,7 @@ _daemon = AutonomousDaemon(
     solver=_self_correcting_solver,
     github_solver=_github_solver,
     notifier=_notifier,
+    auditor=_auditor,
     interval_seconds=300
 )
 
@@ -108,8 +117,10 @@ _telegram_service = TelegramBotService(
     solver=_self_correcting_solver,
     github_solver=_github_solver,
     static_analyzer=_static_analyzer,
-    eas_manager=_eas_manager
+    eas_manager=_eas_manager,
+    auditor=_auditor
 )
+
 
 
 @app.on_event("startup")
@@ -452,6 +463,46 @@ def create_mock_permit(req: MockPermitRequest):
         amount_usdc=req.amount_usdc
     )
     return permit.model_dump(mode="json")
+
+
+class DirectAuditRequest(BaseModel):
+    code: str
+    contract_name: str = "Contract.sol"
+    target_ref: str = "Direct_API"
+
+
+@app.post("/v1/audit/scan", summary="Run automated 24/7 contract audit sweep")
+def run_contract_audit_scan():
+    """Executes automated audit sweep across verified contracts on Base L2."""
+    results = _auditor.run_automated_audit_tick()
+    return {
+        "status": "COMPLETED",
+        "audits_completed": len(results),
+        "results": [r.model_dump(mode="json") for r in results]
+    }
+
+
+@app.get("/v1/audit/reports", summary="Get all automated smart contract audit reports")
+def get_audit_reports(limit: int = 20):
+    """Returns recent smart contract audit reports."""
+    reports = _auditor.audited_contracts[-limit:]
+    return {
+        "count": len(reports),
+        "reports": [r.model_dump(mode="json") for r in reversed(reports)]
+    }
+
+
+@app.post("/v1/audit/direct", summary="Direct smart contract security audit")
+def direct_contract_audit(req: DirectAuditRequest):
+    """Directly audits Solidity source code and issues an on-chain EAS attestation certificate."""
+    res = _auditor.audit_solidity_code(
+        source_code=req.code,
+        contract_name=req.contract_name,
+        target_ref=req.target_ref,
+        source_channel="REST_Direct"
+    )
+    return res.model_dump(mode="json")
+
 
 
 @app.get("/", response_class=HTMLResponse, summary="Agent Visual Console UI")
