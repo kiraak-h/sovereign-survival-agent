@@ -166,18 +166,26 @@ class TelegramBotService:
                 self.send_message("❌ Metabolism manager not attached.", chat_id)
                 return
             state = self.metabolism.state
+            from core.network_config import get_active_network, get_live_onchain_balances
+            active_net = get_active_network()
+            onchain = get_live_onchain_balances(state.agent_address)
+            live_eth = onchain["eth"] if onchain["success"] else state.treasury_eth
+            live_usdc = onchain["usdc"] if onchain["success"] else state.treasury_usdc
+            state.treasury_eth = live_eth
+            state.treasury_usdc = live_usdc
+
             daemon_st = self.daemon.get_status() if self.daemon else None
             msg = (
-                "📊 <b>24/7 Autonomous Performance Digest</b>\n\n"
-                f"• <b>Financial Status:</b> {state.urgency_tier.value} (${state.treasury_usdc:.2f} USDC)\n"
-                f"• <b>Gas Reserve:</b> {state.treasury_eth:.4f} ETH\n"
+                f"📊 <b>24/7 Autonomous Performance Digest ({active_net.name})</b>\n\n"
+                f"• <b>Treasury USDC:</b> ${live_usdc:.2f} USDC\n"
+                f"• <b>Gas Reserve:</b> {live_eth:.4f} ETH\n"
                 f"• <b>Survival Runway:</b> {state.runway_hours:.1f} Hours\n"
                 f"• <b>Daemon Ticks:</b> {daemon_st.total_ticks_completed if daemon_st else 0}\n"
                 f"• <b>Bounties Scanned:</b> {daemon_st.bounties_scanned if daemon_st else 0}\n"
                 f"• <b>PRs Merged & Solved:</b> {daemon_st.bounties_solved if daemon_st else 0}\n"
                 f"• <b>Cumulative Revenue:</b> +${state.total_revenue_earned:.2f} USDC\n"
                 f"• <b>Net Treasury Profit:</b> +${max(0.0, state.total_revenue_earned - state.total_burn_cost):.2f} USDC\n\n"
-                "<i>Agent is operating 24/7 in the cloud.</i>"
+                f"<i>Agent is operating 24/7 in the cloud on {active_net.name}.</i>"
             )
             self.send_message(msg, chat_id)
 
@@ -186,25 +194,31 @@ class TelegramBotService:
                 self.send_message("❌ Metabolism manager not attached.", chat_id)
                 return
             state = self.metabolism.state
-            from core.network_config import get_active_network
+            from core.network_config import get_active_network, get_live_onchain_balances
             active_net = get_active_network()
+            onchain = get_live_onchain_balances(state.agent_address)
+            live_eth = onchain["eth"] if onchain["success"] else state.treasury_eth
+            live_usdc = onchain["usdc"] if onchain["success"] else state.treasury_usdc
+            state.treasury_eth = live_eth
+            state.treasury_usdc = live_usdc
             
             gas_warning = ""
-            if state.treasury_eth < 0.001:
+            if live_eth < 0.0005:
                 gas_warning = "\n⚠️ <b>[LOW GAS WARNING]</b> ETH is low! Fund gas to keep transactions running."
             msg = (
                 f"🧬 <b>Agent Vitals ({active_net.name})</b>\n\n"
                 f"• <b>Status:</b> {'🟢 ALIVE' if state.is_alive else '💀 INSOLVENT'}\n"
                 f"• <b>Mode:</b> {'💎 Production (Real Money)' if active_net.is_production else '🧪 Testnet'}\n"
                 f"• <b>Tier:</b> {state.urgency_tier.value}\n"
-                f"• <b>Treasury USDC:</b> ${state.treasury_usdc:.4f} USDC\n"
-                f"• <b>Gas Balance:</b> {state.treasury_eth:.4f} ETH\n"
+                f"• <b>Treasury USDC:</b> ${live_usdc:.2f} USDC\n"
+                f"• <b>Gas Balance:</b> {live_eth:.6f} ETH\n"
                 f"• <b>Runway:</b> {state.runway_hours:.1f} Hours\n"
                 f"• <b>Hourly Burn:</b> ${self.metabolism.get_hourly_burn_velocity():.4f}/hr\n"
                 f"• <b>Total Claimed:</b> +${state.total_revenue_earned:.2f} USDC{gas_warning}\n\n"
                 f"🔗 <a href='{active_net.explorer_url}/address/{state.agent_address}'>View on BaseScan ↗</a>"
             )
             self.send_message(msg, chat_id)
+
 
 
         elif command == "/scan":

@@ -69,3 +69,34 @@ def get_active_network() -> NetworkSpecs:
         return NETWORKS[NetworkMode.BASE_SEPOLIA]
     return NETWORKS[NetworkMode.BASE_MAINNET]
 
+
+def get_live_onchain_balances(wallet_address: str) -> Dict[str, Any]:
+    """Queries real live on-chain ETH and USDC balances directly from active Base network RPC."""
+    try:
+        from web3 import Web3
+        net = get_active_network()
+        for rpc in net.rpc_urls:
+            try:
+                w3 = Web3(Web3.HTTPProvider(rpc, request_kwargs={"timeout": 5.0}))
+                if not w3.is_connected():
+                    continue
+                chk_addr = Web3.to_checksum_address(wallet_address)
+                
+                # 1. Real on-chain ETH
+                raw_wei = w3.eth.get_balance(chk_addr)
+                eth_bal = float(w3.from_wei(raw_wei, "ether"))
+                
+                # 2. Real on-chain USDC
+                usdc_abi = [{"constant": True, "inputs": [{"name": "account", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "", "type": "uint256"}], "type": "function"}]
+                usdc_contract = w3.eth.contract(address=Web3.to_checksum_address(net.usdc_address), abi=usdc_abi)
+                raw_usdc = usdc_contract.functions.balanceOf(chk_addr).call()
+                usdc_bal = float(raw_usdc / (10 ** net.usdc_decimals))
+                
+                return {"eth": eth_bal, "usdc": usdc_bal, "network": net.name, "success": True}
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return {"eth": 0.0, "usdc": 0.0, "network": "Base Mainnet", "success": False}
+
+

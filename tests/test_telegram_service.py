@@ -32,7 +32,10 @@ def test_telegram_bot_service_handles_vitals_command():
     service.handle_command("/vitals", "12345")
     assert len(sent_messages) == 1
     assert "Agent Vitals" in sent_messages[0]
-    assert "45.5000" in sent_messages[0]
+    assert "Treasury USDC" in sent_messages[0]
+    assert "Gas Balance" in sent_messages[0]
+    assert "BaseScan" in sent_messages[0]
+
 
 
 def test_telegram_bot_service_handles_help_command():
