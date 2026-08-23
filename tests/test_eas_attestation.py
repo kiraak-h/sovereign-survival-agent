@@ -24,4 +24,4 @@ def test_issue_signed_eas_security_attestation():
     assert record.recipient == "0x0aF732eEB4994CB4C9916b4Eb2903d89739fE8de"
     assert record.data.security_score == 95
     assert record.signature.startswith("0x")
-    assert record.easscan_url.startswith("https://base-sepolia.easscan.org")
+    assert "easscan.org/attestation/view/" in record.easscan_url

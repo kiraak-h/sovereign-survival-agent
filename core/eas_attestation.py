@@ -14,18 +14,13 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 from eth_abi import encode
 from web3 import Web3
-from scripts.broadcast_live_tx import (
-    get_connected_w3,
-    get_or_create_agent_wallet,
-    BASE_SEPOLIA_CHAIN_ID,
-    BASE_SEPOLIA_EXPLORER
-)
+from core.network_config import get_active_network, NetworkMode
+from scripts.broadcast_live_tx import get_or_create_agent_wallet
 
-# Standard EAS Registry & Official Registered Schema UID on Base Sepolia
-BASE_SEPOLIA_EAS_CONTRACT = "0x4200000000000000000000000000000000000021"
-BASE_SEPOLIA_SCHEMA_REGISTRY = "0x4200000000000000000000000000000000000020"
+# Standard EAS Registry & Official Registered Schema UID
+BASE_EAS_CONTRACT = "0x4200000000000000000000000000000000000021"
+BASE_SCHEMA_REGISTRY = "0x4200000000000000000000000000000000000020"
 SECURITY_AUDIT_SCHEMA_UID = "0xc5c3850ed0c63998ed4442e2bbdc00eeafd85cb051d93be3140ae70e82419710"
-EAS_SCAN_URL = "https://base-sepolia.easscan.org"
 
 EAS_ABI = [
     {
@@ -133,18 +128,30 @@ class EASAttestationManager:
         basescan_url = None
         mode = "EIP712_OFFCHAIN_SIGNED"
 
+        active_net = get_active_network()
+        eas_scan_url = "https://base.easscan.org" if active_net.is_production else "https://base-sepolia.easscan.org"
+
         # If on-chain broadcast is requested and funds available, submit live transaction
         if broadcast_onchain:
             try:
-                w3, rpc = get_connected_w3()
-                if w3.is_connected():
+                w3 = None
+                for rpc in active_net.rpc_urls:
+                    try:
+                        cand_w3 = Web3(Web3.HTTPProvider(rpc, request_kwargs={"timeout": 6}))
+                        if cand_w3.is_connected():
+                            w3 = cand_w3
+                            break
+                    except Exception:
+                        continue
+
+                if w3 and w3.is_connected():
                     # ABI Encode the schema data: string auditSummary,uint8 securityScore,bool isSecure,address targetContract,uint256 timestamp
                     encoded_data = encode(
                         ["string", "uint8", "bool", "address", "uint256"],
                         [audit_summary[:80], security_score, is_secure, Web3.to_checksum_address(recipient_addr), timestamp]
                     )
 
-                    eas = w3.eth.contract(address=BASE_SEPOLIA_EAS_CONTRACT, abi=EAS_ABI)
+                    eas = w3.eth.contract(address=active_net.eas_contract, abi=EAS_ABI)
                     schema_bytes = bytes.fromhex(SECURITY_AUDIT_SCHEMA_UID.replace("0x", ""))
 
                     request_tuple = (
@@ -166,7 +173,7 @@ class EASAttestationManager:
                         "from": self.agent_address,
                         "nonce": nonce,
                         "gasPrice": gas_price,
-                        "chainId": BASE_SEPOLIA_CHAIN_ID
+                        "chainId": active_net.chain_id
                     })
 
                     signed_tx = w3.eth.account.sign_transaction(tx, self.private_key)
@@ -175,7 +182,7 @@ class EASAttestationManager:
 
                     receipt = w3.eth.wait_for_transaction_receipt(sent_hash, timeout=60)
                     block_number = receipt.blockNumber
-                    basescan_url = f"{BASE_SEPOLIA_EXPLORER}/tx/{tx_hash}"
+                    basescan_url = f"{active_net.explorer_url}/tx/{tx_hash}"
                     mode = "ON_CHAIN_BROADCAST"
 
                     # Extract the true on-chain Attestation UID from receipt logs
@@ -196,6 +203,6 @@ class EASAttestationManager:
             tx_hash=tx_hash,
             block_number=block_number,
             basescan_url=basescan_url,
-            easscan_url=f"{EAS_SCAN_URL}/attestation/view/{uid}",
+            easscan_url=f"{eas_scan_url}/attestation/view/{uid}",
             issued_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(timestamp))
         )
