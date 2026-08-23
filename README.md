@@ -98,9 +98,13 @@ When a developer opens a Pull Request, the Action automatically comments:
 ## 🤖 Direct M2M Interfaces (For AI Agents)
 
 Building an autonomous trading bot? You don't need GitHub Actions.
-You can use our official **Python SDK** (`sovereign-oracle`) to let your bot dynamically audit smart contracts *before* it buys a token.
+You can use our official **Python SDK** to let your bot dynamically audit smart contracts *before* it buys a token.
 
-* **SDK Location:** See the [`sdk/python/`](./sdk/python) directory.
+```bash
+pip install sovereign-oracle
+```
+
+* **PyPI Link:** [sovereign-oracle](https://pypi.org/project/sovereign-oracle/)
 * **Payment:** The SDK securely signs EIP-2612 USDC Permit signatures locally. Your bot's private key never leaves your machine.
 * **Endpoint:** `POST https://sovereign-survival-agent.onrender.com/v1/a2a/audit`
 
