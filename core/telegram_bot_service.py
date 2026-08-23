@@ -479,41 +479,15 @@ class TelegramBotService:
             self.send_message(f"❌ Swarm delegation could not complete: {summary}", chat_id)
 
     def _execute_solve(self, target_url: str, chat_id: str):
-        """Executes sandbox solving for a specific issue URL."""
-        if not target_url:
-            self.send_message("⚠️ Please provide a GitHub URL:\nExample: <code>/solve https://github.com/owner/repo/issues/12</code>", chat_id)
-            return
-        if not self.solver:
-            self.send_message("❌ Solver engine not attached.", chat_id)
-            return
-        
-        self.send_message(f"🛠️ Spawning isolated sandbox workspace & solving: {target_url}...", chat_id)
-        
-        bounty_obj = Bounty(
-            bounty_id="telegram_manual_request",
-            title=f"Fix issue: {target_url}",
-            description=f"Telegram user requested solve for {target_url}",
-            task_type=TaskType.CODE_BUG_FIX,
-            reward_usdc=100.0,
-            deadline_ticks=30,
-            difficulty_score=0.5,
-            issuer_address="0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
-            escrow_address="0x_manual_telegram_escrow"
+        """Deprecated: GitHub solving has been deactivated."""
+        self.send_message(
+            "⚠️ <b>GitHub Bounty Hunter Deactivated</b>\n\n"
+            "The GitHub PR simulation engine has been shut down to prevent API token drain and protect the agent's reputation.\n\n"
+            "🚀 <b>Strategic Pivot Active:</b>\n"
+            "The agent is now exclusively focused on the <b>A2A Smart Contract Audit Oracle</b> pipeline. "
+            "Please drop `.sol` files here or use the `/v1/a2a/audit` REST endpoint to generate real revenue.",
+            chat_id
         )
-
-        result = self.solver.solve_with_verification(bounty_obj, max_attempts=3, model_tier=ModelTier.CHEAP_FLASH)
-        if result.success and result.pull_request:
-            dispatch = self.github_solver.dispatch_pull_request(result.pull_request) if self.github_solver else {}
-            preview_url = dispatch.get("pr_url") or dispatch.get("pr_preview_url", target_url)
-            self.send_message(
-                f"🎉 <b>Successfully Solved & Verified in {result.total_attempts} attempt(s)!</b>\n\n"
-                f"• Target: {result.pull_request.repo_owner}/{result.pull_request.repo_name}#{result.pull_request.issue_number}\n"
-                f"• Inference Cost: ${result.total_cost_usdc:.6f} USDC ({result.total_tokens} tokens)\n"
-                f"• <a href='{preview_url}'>🐙 View Generated Pull Request ↗</a>",
-                chat_id
-            )
-        else:
-            self.send_message(f"❌ Could not verify fix: {result.execution_summary}", chat_id)
 
     def _handle_direct_solidity_audit(self, code_text: str, chat_id: str):
         """Audits raw Solidity code dropped into Telegram chat and generates EAS attestation."""

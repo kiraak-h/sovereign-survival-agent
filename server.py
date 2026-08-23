@@ -39,16 +39,12 @@ from core.policy_engine import SurvivalPolicyEngine
 from core.wallet import SovereignWallet
 from core.static_analyzer import RealSolidityStaticAnalyzer
 from core.usdc_contract import BaseSepoliaUSDCClient
-from core.github_solver import GitHubSolverEngine, PullRequestPayload
 from core.llm_gateway import LLMGateway
-from core.self_correcting_solver import SelfCorrectingSolver
 from core.eas_attestation import EASAttestationManager, AttestationRecord
 from core.notifier import AgentNotifier
 from daemon.autonomous_daemon import AutonomousDaemon
 from channels.service_oracle import ServiceOracle
-from channels.bounty_hunter import BountyHunter
 from channels.subcontracting_engine import A2ASubcontractingEngine
-from channels.github_bounty_scanner import GitHubBountyScanner, ScannedBounty
 from channels.social_broadcaster import SocialMarketingBroadcaster, SocialPostResult
 from channels.multi_platform_webhooks import MultiPlatformWebhookHandler, WebhookEventResponse
 from simulation.market_simulator import MarketSimulator
@@ -74,19 +70,15 @@ _metabolism = MetabolismManager(_agent_state)
 _wallet = SovereignWallet(_agent_state)
 _policy = SurvivalPolicyEngine(_agent_state)
 _oracle = ServiceOracle(_metabolism, _policy, _wallet, base_audit_fee_usdc=0.50)
-_bounty_hunter = BountyHunter(_metabolism, _policy, _wallet)
 _a2a_engine = A2ASubcontractingEngine(_metabolism, _policy, _wallet)
 _market = MarketSimulator(_wallet)
 _static_analyzer = RealSolidityStaticAnalyzer()
 _usdc_client = BaseSepoliaUSDCClient()
-_bounty_scanner = GitHubBountyScanner()
 _llm_gateway = LLMGateway(metabolism=_metabolism)
 
 from channels.automated_contract_auditor import AutomatedContractAuditor
 from channels.a2a_gateway import A2AGateway, A2AAuditRequest
 
-_self_correcting_solver = SelfCorrectingSolver(agent_address=_agent_state.agent_address, llm_gateway=_llm_gateway)
-_github_solver = GitHubSolverEngine(agent_address=_agent_state.agent_address)
 _eas_manager = EASAttestationManager(agent_address=_agent_state.agent_address)
 _notifier = AgentNotifier()
 _social_broadcaster = SocialMarketingBroadcaster()
@@ -106,9 +98,6 @@ _a2a_gateway = A2AGateway(
 _daemon = AutonomousDaemon(
     metabolism=_metabolism,
     policy=_policy,
-    scanner=_bounty_scanner,
-    solver=_self_correcting_solver,
-    github_solver=_github_solver,
     notifier=_notifier,
     auditor=_auditor,
     interval_seconds=300
@@ -120,9 +109,6 @@ from core.telegram_bot_service import TelegramBotService
 _telegram_service = TelegramBotService(
     metabolism=_metabolism,
     daemon=_daemon,
-    scanner=_bounty_scanner,
-    solver=_self_correcting_solver,
-    github_solver=_github_solver,
     static_analyzer=_static_analyzer,
     eas_manager=_eas_manager,
     auditor=_auditor
@@ -499,16 +485,11 @@ def get_audit_reports(limit: int = 20):
     }
 
 
-@app.post("/v1/audit/direct", summary="Direct smart contract security audit")
-def direct_contract_audit(req: DirectAuditRequest):
-    """Directly audits Solidity source code and issues an on-chain EAS attestation certificate."""
-    res = _auditor.audit_solidity_code(
-        source_code=req.code,
-        contract_name=req.contract_name,
-        target_ref=req.target_ref,
-        source_channel="REST_Direct"
-    )
-    return res.model_dump(mode="json")
+@app.post("/v1/audit/direct", summary="Direct smart contract security audit (DEPRECATED)")
+def direct_contract_audit(req: DirectAuditRequest, response: Response):
+    """DEPRECATED: Use /v1/a2a/audit for authenticated auditing."""
+    response.status_code = 403
+    return {"error": "HTTP 403 Forbidden: Free tier deactivated. Upgrade to /v1/a2a/audit using a paid API Key or EIP-2612 permit."}
 
 
 @app.post("/v1/a2a/audit", summary="Agent-to-Agent (A2A) HTTP-402 Verification Endpoint")

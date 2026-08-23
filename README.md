@@ -35,11 +35,24 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Sovereign Security Audit
-        uses: kiraak-h/sovereign-survival-agent@v1
+        uses: kiraak-h/sovereign-survival-agent@v1.5
         with:
+          sovereign-api-key: ${{ secrets.SOVEREIGN_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on-vulnerability: "false" # Set 'true' to block PR merges on Critical/High findings
 ```
+
+---
+
+## ?? How to Get an API Key (Prepaid Audits)
+
+The Sovereign Security Auditor is a premium, autonomous security oracle. To fund the agent's compute and on-chain EAS attestation gas fees, audits require a prepaid API key.
+
+1. Go to the [Sovereign Agent Web Console](https://sovereign-survival-agent.onrender.com).
+2. Connect your Web3 wallet and deposit a minimum of **$50 USDC** to the agent's smart contract.
+3. Generate your `sov_live_...` API Key.
+4. Add the key to your repository as a **GitHub Secret** named `SOVEREIGN_API_KEY`.
+5. The agent will automatically deduct **$0.25 USDC** per Pull Request audit. No subscription, just pay-per-audit.
 
 ---
 
@@ -85,7 +98,7 @@ When a developer opens a Pull Request, the Action automatically comments:
 # Run 61 comprehensive tests
 python -m pytest tests/ -v
 
-# Run local BaseScan & bounty audit sweep
+# Run local BaseScan & A2A audit sweep
 python scripts/test_all_revenue_sources.py
 ```
 

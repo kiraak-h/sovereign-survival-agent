@@ -99,22 +99,31 @@ def main():
     audit_results = []
     
     for f in sol_files:
-        print(f"    • Auditing {f.name}...")
+        print(f"      Auditing {f.name}...")
         try:
             code = f.read_text(encoding="utf-8")
+            api_key = os.getenv("SOVEREIGN_API_KEY")
+            if not api_key:
+                print("[-] FATAL: SOVEREIGN_API_KEY is missing. Purchase a key to use this action.")
+                sys.exit(1)
+                
             res = requests.post(
-                f"{agent_api}/v1/audit/direct",
+                f"{agent_api}/v1/a2a/audit",
                 json={
                     "code": code,
                     "contract_name": f.name,
-                    "target_ref": f"CI/{f.name}"
+                    "client_agent_id": f"github_ci_{repo}",
+                    "api_key": api_key
                 },
                 timeout=20
             )
             if res.status_code == 200:
                 audit_results.append(res.json())
+            elif res.status_code == 402:
+                print(f"[-] HTTP 402 Payment Required: {res.json().get('error')}")
+                sys.exit(1)
             else:
-                print(f"[-] Error auditing {f.name}: HTTP {res.status_code}")
+                print(f"[-] Error auditing {f.name}: HTTP {res.status_code} - {res.text}")
         except Exception as e:
             print(f"[-] Error connecting to Sovereign Agent API: {e}")
 
