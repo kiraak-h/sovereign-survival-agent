@@ -140,7 +140,7 @@ class TelegramBotService:
             msg = (
                 "🛡️ *Sovereign Sniper Bot*\n\n"
                 "/wallet - Generate or view your trading wallet\n"
-                "/buy <token> <amount> - Securely snipe a token\n"
+                "/buy [token] [amount] - Securely snipe a token\n"
             )
             if is_admin:
                 msg += (
@@ -149,16 +149,16 @@ class TelegramBotService:
                     "/sweep - Force on-chain settlement\n"
                 )
             msg += "\nPaste a Solidity contract for an instant AST audit."
-            self.send_message(chat_id, msg)
+            self.send_message(msg, chat_id)
             
         elif cmd_text == "/status":
             if not is_admin:
-                return self.send_message(chat_id, "❌ Unauthorized.")
+                return self.send_message("❌ Unauthorized.", chat_id)
             self._handle_status(chat_id)
             
         elif cmd_text == "/sweep":
             if not is_admin:
-                return self.send_message(chat_id, "❌ Unauthorized.")
+                return self.send_message("❌ Unauthorized.", chat_id)
             self._execute_sweep(chat_id)
             
         elif cmd_text == "/wallet":
@@ -168,7 +168,7 @@ class TelegramBotService:
             self._handle_buy(cmd_text, chat_id)
             
         else:
-            self.send_message(chat_id, "Unknown command. Try /help")
+            self.send_message("Unknown command. Try /help", chat_id)
 
     def _handle_wallet(self, chat_id: str):
         try:
@@ -180,25 +180,25 @@ class TelegramBotService:
                 f"⚠️ *Deposit Base ETH here to trade.*\n"
                 f"Keep your private key secure. Do not share it."
             )
-            self.send_message(chat_id, msg)
+            self.send_message(msg, chat_id)
         except Exception as e:
-            self.send_message(chat_id, f"Error generating wallet: {e}")
+            self.send_message(f"Error generating wallet: {e}", chat_id)
 
     def _handle_buy(self, cmd_text: str, chat_id: str):
         parts = cmd_text.split()
         if len(parts) != 3:
-            return self.send_message(chat_id, "Usage: `/buy <token_address> <eth_amount>`")
+            return self.send_message("Usage: `/buy [token_address] [eth_amount]`", chat_id)
             
         token = parts[1]
         try:
             amount = float(parts[2])
         except ValueError:
-            return self.send_message(chat_id, "Invalid ETH amount.")
+            return self.send_message("Invalid ETH amount.", chat_id)
             
-        self.send_message(chat_id, f"🔍 *Scanning* `{token}` *for honeypots...*")
+        self.send_message(f"🔍 *Scanning* `{token}` *for honeypots...*", chat_id)
         import time
         time.sleep(1)
-        self.send_message(chat_id, "✅ *AST Clear. Zero mints detected. Routing trade...*")
+        self.send_message("✅ *AST Clear. Zero mints detected. Routing trade...*", chat_id)
         
         try:
             from core.sniper_wallet import get_or_create_wallet
@@ -214,11 +214,11 @@ class TelegramBotService:
                     f"Fee (1%): {result['fee_eth']} ETH\n\n"
                     f"Tx Hash: [{result['simulated_tx_hash']}](https://basescan.org/tx/{result['simulated_tx_hash']})"
                 )
-                self.send_message(chat_id, msg)
+                self.send_message(msg, chat_id)
             else:
-                self.send_message(chat_id, f"❌ Trade Failed: {result['message']}")
+                self.send_message(f"❌ Trade Failed: {result['message']}", chat_id)
         except Exception as e:
-            self.send_message(chat_id, f"❌ Error: {e}")
+            self.send_message(f"❌ Error: {e}", chat_id)
     def _handle_status(self, chat_id: str):
         import sqlite3
         total_web2_usdc = 0.0
@@ -238,11 +238,11 @@ class TelegramBotService:
                     elif row["status"] == "PENDING":
                         pending_count += row[1]
             msg = "🤖 *Sovereign Agent Status*\n\n💰 *Total Revenue:* $" + f"{(total_web2_usdc + total_web3_usdc):.2f}" + " USDC\n├ Web2 API Keys: $" + f"{total_web2_usdc:.2f}" + "\n└ Web3 M2M: $" + f"{total_web3_usdc:.2f}" + "\n\n🧹 *Pending Sweeps:* " + str(pending_count) + " un-cashed EIP-2612 permits\n🟢 *Daemon:* UNSTOPPABLE 24/7"
-            self.send_message(chat_id, msg)
+            self.send_message(msg, chat_id)
         except Exception as e:
-            self.send_message(chat_id, f"Error fetching status: {e}")
+            self.send_message(f"Error fetching status: {e}", chat_id)
     def _execute_sweep(self, chat_id: str):
-        self.send_message(chat_id, "🧹 *Initiating On-Chain Sweep...*")
+        self.send_message("🧹 *Initiating On-Chain Sweep...*", chat_id)
         try:
             from scripts.sweep_permits import sweep_pending_permits
             import io
@@ -254,9 +254,9 @@ class TelegramBotService:
             output = my_stdout.getvalue()
             if not output.strip():
                 output = "No pending permits found."
-            self.send_message(chat_id, "✅ *Sweep Complete*\n```text\n" + output[:4000] + "\n```")
+            self.send_message("✅ *Sweep Complete*\n```text\n" + output[:4000] + "\n```", chat_id)
         except Exception as e:
-            self.send_message(chat_id, f"❌ *Sweep Failed*\n{e}")
+            self.send_message(f"❌ *Sweep Failed*\n{e}", chat_id)
     
     def _handle_wallet(self, chat_id: str):
         try:
@@ -268,26 +268,26 @@ class TelegramBotService:
                 f"⚠️ *Deposit Base ETH here to trade.*\n"
                 f"Keep your private key secure. Do not share it."
             )
-            self.send_message(chat_id, msg)
+            self.send_message(msg, chat_id)
         except Exception as e:
-            self.send_message(chat_id, f"Error generating wallet: {e}")
+            self.send_message(f"Error generating wallet: {e}", chat_id)
 
     def _handle_buy(self, cmd_text: str, chat_id: str):
         parts = cmd_text.split()
         if len(parts) != 3:
-            return self.send_message(chat_id, "Usage: /buy <token_address> <eth_amount>")
+            return self.send_message("Usage: /buy [token_address] [eth_amount]", chat_id)
             
         token = parts[1]
         try:
             amount = float(parts[2])
         except ValueError:
-            return self.send_message(chat_id, "Invalid ETH amount.")
+            return self.send_message("Invalid ETH amount.", chat_id)
             
-        self.send_message(chat_id, f"🔍 *Scanning* {token} *for honeypots...*")
+        self.send_message(f"🔍 *Scanning* {token} *for honeypots...*", chat_id)
         
         import time
         time.sleep(1)
-        self.send_message(chat_id, "✅ *AST Clear. Zero mints detected. Routing trade...*")
+        self.send_message("✅ *AST Clear. Zero mints detected. Routing trade...*", chat_id)
         
         try:
             from core.sniper_wallet import get_or_create_wallet
@@ -303,11 +303,11 @@ class TelegramBotService:
                     f"Fee (1%): {result['fee_eth']} ETH\n\n"
                     f"Tx Hash: [{result['simulated_tx_hash']}](https://basescan.org/tx/{result['simulated_tx_hash']})"
                 )
-                self.send_message(chat_id, msg)
+                self.send_message(msg, chat_id)
             else:
-                self.send_message(chat_id, f"❌ Trade Failed: {result['message']}")
+                self.send_message(f"❌ Trade Failed: {result['message']}", chat_id)
         except Exception as e:
-            self.send_message(chat_id, f"❌ Error: {e}")
+            self.send_message(f"❌ Error: {e}", chat_id)
 
     def _handle_direct_solidity_audit(self, code_text: str, chat_id: str):
         """Audits raw Solidity code dropped into Telegram chat and generates EAS attestation."""
