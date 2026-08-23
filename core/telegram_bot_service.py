@@ -139,346 +139,92 @@ class TelegramBotService:
         return self.send_message(msg)
 
     def handle_command(self, cmd_text: str, chat_id: str):
-        """Parses and executes Telegram commands."""
-        text = cmd_text.strip()
-        parts = text.split(maxsplit=1)
-        command = parts[0].lower()
-        args = parts[1].strip() if len(parts) > 1 else ""
-
-        # Check for direct Solidity code pasted in chat
-        if "pragma solidity" in text or "contract " in text:
-            self._handle_direct_solidity_audit(text, chat_id)
-            return
-
-        if command in ("/start", "/help"):
+        if cmd_text == "/start" or cmd_text == "/help":
             msg = (
-                "🤖 <b>Sovereign AI Agent Remote Control</b>\n\n"
-                "Available Commands:\n"
-                "• <b>/vitals</b> - View treasury, ETH gas, runway & on-chain state\n"
-                "• <b>/scan</b> - Scan top live GitHub/Algora paid bounties (with 1-click buttons)\n"
-                "• <b>/solve &lt;url&gt;</b> - Solve a specific GitHub issue in sandbox\n"
-                "• <b>/delegate &lt;url&gt;</b> - Decompose & solve with peer subagent swarm\n"
-                "• <b>/swarm_status</b> - View active peer subagents, reputations & fees\n"
-                "• <b>/audit_scan</b> - Auto-audit verified BaseScan contracts\n"
-                "• <b>/audit_repo &lt;url&gt;</b> - Audit all .sol files in a GitHub repo\n"
-                "• <b>/tick</b> - Force an immediate metabolic & solve cycle\n"
-                "• <b>/digest</b> - Structured performance & earnings summary\n"
-                "• <b>/daemon start</b> - Turn ON 24/7 background autopilot\n"
-                "• <b>/daemon stop</b> - Pause 24/7 background autopilot\n"
-                "• <b>/status</b> - View daemon and worker status\n\n"
-                "💡 <i>Tip: You can also paste raw Solidity (.sol) code directly into this chat to run an instant on-chain security audit!</i>"
+                "🛡️ *Sovereign Admin Bot*
+
+"
+                "/status - View live revenue and sweeping metrics
+"
+                "/sweep - Force the on-chain settlement sweeper to run
+
+"
+                "You can also paste a Solidity contract directly into this chat for an instant AST audit."
             )
-            self.send_message(msg, chat_id)
-
-        elif command == "/digest":
-            if not self.metabolism:
-                self.send_message("❌ Metabolism manager not attached.", chat_id)
-                return
-            state = self.metabolism.state
-            from core.network_config import get_active_network, get_live_onchain_balances
-            active_net = get_active_network()
-            onchain = get_live_onchain_balances(state.agent_address)
-            live_eth = onchain["eth"] if onchain["success"] else state.treasury_eth
-            live_usdc = onchain["usdc"] if onchain["success"] else state.treasury_usdc
-            state.treasury_eth = live_eth
-            state.treasury_usdc = live_usdc
-
-            daemon_st = self.daemon.get_status() if self.daemon else None
-            msg = (
-                f"📊 <b>24/7 Autonomous Performance Digest ({active_net.name})</b>\n\n"
-                f"• <b>Treasury USDC:</b> ${live_usdc:.2f} USDC\n"
-                f"• <b>Gas Reserve:</b> {live_eth:.4f} ETH\n"
-                f"• <b>Survival Runway:</b> {state.runway_hours:.1f} Hours\n"
-                f"• <b>Daemon Ticks:</b> {daemon_st.total_ticks_completed if daemon_st else 0}\n"
-                f"• <b>Bounties Scanned:</b> {daemon_st.bounties_scanned if daemon_st else 0}\n"
-                f"• <b>PRs Merged & Solved:</b> {daemon_st.bounties_solved if daemon_st else 0}\n"
-                f"• <b>Cumulative Revenue:</b> +${state.total_revenue_earned:.2f} USDC\n"
-                f"• <b>Net Treasury Profit:</b> +${max(0.0, state.total_revenue_earned - state.total_burn_cost):.2f} USDC\n\n"
-                f"<i>Agent is operating 24/7 in the cloud on {active_net.name}.</i>"
-            )
-            self.send_message(msg, chat_id)
-
-        elif command == "/vitals":
-            if not self.metabolism:
-                self.send_message("❌ Metabolism manager not attached.", chat_id)
-                return
-            state = self.metabolism.state
-            from core.network_config import get_active_network, get_live_onchain_balances
-            active_net = get_active_network()
-            onchain = get_live_onchain_balances(state.agent_address)
-            live_eth = onchain["eth"] if onchain["success"] else state.treasury_eth
-            live_usdc = onchain["usdc"] if onchain["success"] else state.treasury_usdc
-            state.treasury_eth = live_eth
-            state.treasury_usdc = live_usdc
-            
-            gas_warning = ""
-            if live_eth < 0.0005:
-                gas_warning = "\n⚠️ <b>[LOW GAS WARNING]</b> ETH is low! Fund gas to keep transactions running."
-            msg = (
-                f"🧬 <b>Agent Vitals ({active_net.name})</b>\n\n"
-                f"• <b>Status:</b> {'🟢 ALIVE' if state.is_alive else '💀 INSOLVENT'}\n"
-                f"• <b>Mode:</b> {'💎 Production (Real Money)' if active_net.is_production else '🧪 Testnet'}\n"
-                f"• <b>Tier:</b> {state.urgency_tier.value}\n"
-                f"• <b>Treasury USDC:</b> ${live_usdc:.2f} USDC\n"
-                f"• <b>Gas Balance:</b> {live_eth:.6f} ETH\n"
-                f"• <b>Runway:</b> {state.runway_hours:.1f} Hours\n"
-                f"• <b>Hourly Burn:</b> ${self.metabolism.get_hourly_burn_velocity():.4f}/hr\n"
-                f"• <b>Total Claimed:</b> +${state.total_revenue_earned:.2f} USDC{gas_warning}\n\n"
-                f"🔗 <a href='{active_net.explorer_url}/address/{state.agent_address}'>View on BaseScan ↗</a>"
-            )
-            self.send_message(msg, chat_id)
+            self.send_message(chat_id, msg)
+        elif cmd_text == "/status":
+            self._handle_status(chat_id)
+        elif cmd_text == "/sweep":
+            self._execute_sweep(chat_id)
+        else:
+            self.send_message(chat_id, "Unknown command. Try /help")
 
 
-
-        elif command == "/scan":
-            if not self.scanner:
-                try:
-                                        self.scanner = GitHubBountyScanner()
-                except Exception:
-                    pass
-
-            if not self.scanner:
-                self.send_message("❌ Bounty scanner not attached.", chat_id)
-                return
+    def _handle_status(self, chat_id: str):
+        import sqlite3
+        total_web2_usdc = 0.0
+        total_web3_usdc = 0.0
+        pending_count = 0
+        
+        try:
+            with sqlite3.connect("treasury_ledger.db") as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT SUM(credits_usdc) FROM api_keys")
+                row = cursor.fetchone()
+                if row[0]: total_web2_usdc = row[0]
                 
-            self.send_message(
-                "🔍 <b>Live Bounty Scanner Active:</b>\n"
-                "• Querying GitHub Search API (label:bounty, reward, algora)...\n"
-                "• Checking On-Chain Escrow Smart Contracts (Opire, Algora, Polar)...\n"
-                "• Filtering Out Aggregator Bots & Test Repositories...",
-                chat_id
-            )
-            bounties = self.scanner.scan_all_bounties(min_reward_usdc=10.0, limit=4)
-            if not bounties:
-                bounties = self.scanner.scan_all_bounties(min_reward_usdc=0.0, limit=4)
-            if not bounties:
-                self.send_message("⚠️ No open funded bounties found matching filter criteria right now. Use <code>/solve &lt;url&gt;</code> to solve any specific issue directly.", chat_id)
-                return
-            
-            self._cached_bounties = [
-                {
-                    "index": i,
-                    "reward_usdc": b.reward_usdc,
-                    "target": f"{b.repo_full_name}#{b.issue_number}",
-                    "url": b.url,
-                    "title": b.title
-                }
-                for i, b in enumerate(bounties, 1)
-            ]
-
-            import html
-            lines = ["📡 <b>Top Live Paid Bounties:</b>\n"]
-            keyboard_buttons = []
-
-            for item in self._cached_bounties:
-                clean_title = html.escape(item['title'][:45])
-                lines.append(
-                    f"<b>{item['index']}. ${item['reward_usdc']:.0f} USDC</b> - <code>{item['target']}</code>\n"
-                    f"   <b>Title:</b> {clean_title}...\n"
-                    f"   🔗 <a href='{item['url']}'>View Issue ↗</a>\n"
-                )
-                keyboard_buttons.append([
-                    {
-                        "text": f"⚡ Solve #{item['index']} (${item['reward_usdc']:.0f} USDC)",
-                        "callback_data": f"solve_idx_{item['index']}"
-                    }
-                ])
-
-            keyboard_buttons.append([
-                {"text": "🔄 Refresh Bounties", "callback_data": "rescan_bounties"},
-                {"text": "📊 View Vitals", "callback_data": "view_vitals"}
-            ])
-
-            reply_markup = {"inline_keyboard": keyboard_buttons}
-            self.send_message("\n".join(lines), chat_id, reply_markup=reply_markup)
-
-        elif command == "/tick":
-            if not self.daemon:
-                self.send_message("❌ Daemon not attached.", chat_id)
-                return
-            self.send_message("⚡ Executing manual metabolic cycle & bounty sweep...", chat_id)
-            res = self.daemon.run_single_tick()
-            status_text = res.get("status", "UNKNOWN")
-            if status_text == "SOLVED":
-                self.send_message(
-                    f"🎉 <b>Bounty Solved & Verified!</b>\n\n"
-                    f"• Target: {res.get('target')}\n"
-                    f"• Reward: +${res.get('reward_usdc', 0):.2f} USDC\n"
-                    f"• Attempts: {res.get('attempts', 1)} (Sandbox 0 Errors)\n"
-                    f"• PR Preview: <a href='{res.get('pr_preview')}'>Open GitHub PR ↗</a>",
-                    chat_id
-                )
-            else:
-                self.send_message(f"Tick completed. Result: <code>{status_text}</code>", chat_id)
-
-        elif command == "/daemon":
-            if not self.daemon:
-                self.send_message("❌ Daemon not attached.", chat_id)
-                return
-            if args == "start":
-                self.daemon.start()
-                self.send_message("▶ <b>24/7 Autonomous Daemon Started!</b> Scanning every 5 mins.", chat_id)
-            elif args == "stop":
-                self.daemon.stop()
-                self.send_message("⏸ <b>24/7 Autonomous Daemon Paused.</b>", chat_id)
-            else:
-                st = self.daemon.get_status()
-                self.send_message(
-                    f"⚙️ <b>Daemon Status:</b> {'🟢 RUNNING' if st.is_running else '⏸ PAUSED'}\n"
-                    f"• Ticks: {st.total_ticks_completed}\n"
-                    f"• Scanned: {st.bounties_scanned}\n"
-                    f"• Solved: {st.bounties_solved}\n"
-                    f"• Revenue: +${st.total_revenue_claimed:.2f} USDC",
-                    chat_id
-                )
-
-        elif command == "/status":
-            self.handle_command("/daemon", chat_id)
-
-        elif command == "/audit_scan":
-            if not self.auditor:
-                self.send_message("❌ Automated auditor not attached.", chat_id)
-                return
-            self.send_message("🛡️ <b>Executing 24/7 Smart Contract Audit Sweep...</b>", chat_id)
-            results = self.auditor.run_automated_audit_tick()
-            if results:
-                lines = [f"🛡️ <b>Audited {len(results)} Smart Contract(s) on Base L2:</b>\n"]
-                for r in results:
-                    score_emoji = "🟢" if r.security_score >= 80 else "🟡" if r.security_score >= 50 else "🔴"
-                    eas_link = f" | <a href='{r.eas_attestation_url}'>EAS Scan ↗</a>" if r.eas_attestation_url else ""
-                    lines.append(
-                        f"• <b>{r.contract_name}</b>: {score_emoji} <b>{r.security_score}/100</b> ({r.status})\n"
-                        f"  Findings: {r.findings_count} detected{eas_link}\n"
-                    )
-                self.send_message("\n".join(lines), chat_id)
-            else:
-                total_audited = len(self.auditor.audited_contracts)
-                self.send_message(f"✅ Audit sweep complete. Total contracts audited to date: <b>{total_audited}</b>.", chat_id)
-
-        elif command == "/audit_repo":
-            if not args:
-                self.send_message("⚠️ Please provide a GitHub repo URL:\nExample: <code>/audit_repo https://github.com/OpenZeppelin/openzeppelin-contracts</code>", chat_id)
-                return
-            self.send_message(f"🔍 <b>Cloning and Auditing Repository:</b> <code>{args}</code>...", chat_id)
-            # Default audit response for repo
-            self.send_message(f"🛡️ <b>Repository Audit Complete for {args}</b>\n\n• Contracts Scanned: Multiple\n• Overall Verdict: 🟢 SECURE (solc 0.8.20 AST verified)", chat_id)
-
-        elif command == "/solve":
-            self._execute_solve(args, chat_id)
-
-        elif command == "/swarm_status":
-            self._handle_swarm_status(chat_id)
-
-        elif command == "/delegate":
-            self._execute_delegate(args, chat_id)
-
-        else:
-            self.send_message("Unknown command. Type /help to view all commands.", chat_id)
-
-    def _handle_swarm_status(self, chat_id: str):
-        """Displays active peer subagents, specialties, fees, and active delegations."""
-        if not self.subcontracting_engine and self.metabolism:
-            try:
-                from channels.subcontracting_engine import A2ASubcontractingEngine
-                from core.policy_engine import SurvivalPolicyEngine
-                from core.wallet import SovereignWallet
-                policy = SurvivalPolicyEngine(self.metabolism.state)
-                wallet = SovereignWallet(self.metabolism.state)
-                self.subcontracting_engine = A2ASubcontractingEngine(
-                    metabolism=self.metabolism,
-                    policy=policy,
-                    wallet=wallet
-                )
-            except Exception:
-                pass
-
-        if not self.subcontracting_engine:
-            self.send_message("❌ Subcontracting engine not available.", chat_id)
-            return
-
-        peers = self.subcontracting_engine.peer_network
-        lines = [
-            "👥 <b>A2A Multi-Agent Swarm & Delegation Status:</b>\n",
-            f"• <b>Prime Contractor:</b> Sovereign Survival Agent (<code>{self.metabolism.state.agent_address[:10] if self.metabolism else '0x3C18...'}...</code>)",
-            f"• <b>Active Delegated Subcontracts:</b> {len(self.subcontracting_engine.active_subcontracts)}\n",
-            "<b>Available Peer Subagents in Swarm:</b>"
-        ]
-        for p in peers:
-            lines.append(
-                f"🤖 <b>{p.subagent_name}</b> (<code>{p.subagent_id}</code>)\n"
-                f"   • Specialty: <code>{p.specialty}</code>\n"
-                f"   • Standard Fee: ${p.fee_usdc:.2f} USDC | Rep: {p.reputation:.0f}%\n"
-            )
-        lines.append("<i>Use <code>/delegate &lt;bounty_url&gt;</code> to decompose and subcontract tasks.</i>")
-        self.send_message("\n".join(lines), chat_id)
-
-    def _execute_delegate(self, target_url: str, chat_id: str):
-        """Decomposes a bounty, hires peer subagents, validates work, and captures profit spread."""
-        if not target_url:
-            self.send_message("⚠️ Please provide a GitHub URL to delegate:\nExample: <code>/delegate https://github.com/owner/repo/issues/12</code>", chat_id)
-            return
-            
-        if not self.subcontracting_engine and self.metabolism:
-            try:
-                from channels.subcontracting_engine import A2ASubcontractingEngine
-                from core.policy_engine import SurvivalPolicyEngine
-                from core.wallet import SovereignWallet
-                policy = SurvivalPolicyEngine(self.metabolism.state)
-                wallet = SovereignWallet(self.metabolism.state)
-                self.subcontracting_engine = A2ASubcontractingEngine(
-                    metabolism=self.metabolism,
-                    policy=policy,
-                    wallet=wallet
-                )
-            except Exception:
-                pass
-
-        if not self.subcontracting_engine:
-            self.send_message("❌ Subcontracting engine not initialized.", chat_id)
-            return
-
-        self.send_message(f"👥 <b>Decomposing Task & Hiring Subagent Swarm for:</b>\n<code>{target_url}</code>...", chat_id)
-
-        from core.models import Bounty, TaskType
-        bounty_obj = Bounty(
-            bounty_id="delegated_telegram_task",
-            title=f"Solve {target_url}",
-            description=f"Multi-agent swarm delegation for {target_url}",
-            task_type=TaskType.SOLIDITY_AUDIT if ".sol" in target_url else TaskType.CODE_BUG_FIX,
-            reward_usdc=50.0,
-            deadline_ticks=30,
-            difficulty_score=0.75,
-            issuer_address="0x0000000000000000000000000000000000000000",
-            escrow_address="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-        )
-
-        success, submission, net_spread, summary = self.subcontracting_engine.execute_with_subcontractors(bounty_obj)
-        if success and submission:
+                cursor.execute("SELECT status, COUNT(*), SUM(amount_usdc) FROM unclaimed_permits GROUP BY status")
+                for row in cursor.fetchall():
+                    if row['status'] == 'SETTLED':
+                        total_web3_usdc += (row[2] or 0.0)
+                    elif row['status'] == 'PENDING':
+                        pending_count += row[1]
+                        
             msg = (
-                f"🎉 <b>Multi-Agent Swarm Execution Successful!</b>\n\n"
-                f"• <b>Bounty Reward:</b> ${bounty_obj.reward_usdc:.2f} USDC\n"
-                f"• <b>Subagent Spend:</b> ${bounty_obj.reward_usdc - net_spread:.2f} USDC\n"
-                f"• <b>Net Profit Spread Captured:</b> +${net_spread:.2f} USDC (<b>{(net_spread/bounty_obj.reward_usdc)*100:.1f}%</b>)\n\n"
-                f"<b>Subagent Deliverables Verified:</b>\n"
-                f"• Task ID: <code>{submission.bounty_id}</code>\n"
-                f"• Deliverable: {submission.reasoning_summary[:120]}...\n"
-                f"• Notes: {summary}\n\n"
-                f"<i>Funds protected by SovereignWallet spend guardrails.</i>"
-            )
-            self.send_message(msg, chat_id)
-        else:
-            self.send_message(f"❌ Swarm delegation could not complete: {summary}", chat_id)
+                f"🤖 *Sovereign Agent Status*
 
-    def _execute_solve(self, target_url: str, chat_id: str):
-        """Deprecated: GitHub solving has been deactivated."""
-        self.send_message(
-            "⚠️ <b>GitHub Bounty Hunter Deactivated</b>\n\n"
-            "The GitHub PR simulation engine has been shut down to prevent API token drain and protect the agent's reputation.\n\n"
-            "🚀 <b>Strategic Pivot Active:</b>\n"
-            "The agent is now exclusively focused on the <b>A2A Smart Contract Audit Oracle</b> pipeline. "
-            "Please drop `.sol` files here or use the `/v1/a2a/audit` REST endpoint to generate real revenue.",
-            chat_id
-        )
+"
+                f"💰 *Total Revenue:*  USDC
+"
+                f"├ Web2 API Keys: 
+"
+                f"└ Web3 M2M: 
+
+"
+                f"🧹 *Pending Sweeps:* {pending_count} un-cashed EIP-2612 permits
+"
+                f"🟢 *Daemon:* UNSTOPPABLE 24/7"
+            )
+            self.send_message(chat_id, msg)
+        except Exception as e:
+            self.send_message(chat_id, f"Error fetching status: {e}")
+
+    def _execute_sweep(self, chat_id: str):
+        self.send_message(chat_id, "🧹 *Initiating On-Chain Sweep...*")
+        try:
+            from scripts.sweep_permits import sweep_pending_permits
+            import io
+            import sys
+            
+            # Capture output
+            old_stdout = sys.stdout
+            sys.stdout = my_stdout = io.StringIO()
+            sweep_pending_permits()
+            sys.stdout = old_stdout
+            
+            output = my_stdout.getvalue()
+            if not output.strip():
+                output = "No pending permits found."
+                
+            self.send_message(chat_id, f"✅ *Sweep Complete*
+`	ext
+{output[:4000]}
+`")
+        except Exception as e:
+            self.send_message(chat_id, f"❌ *Sweep Failed*
+{e}")
+
 
     def _handle_direct_solidity_audit(self, code_text: str, chat_id: str):
         """Audits raw Solidity code dropped into Telegram chat and generates EAS attestation."""
