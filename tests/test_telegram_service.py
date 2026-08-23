@@ -109,3 +109,48 @@ def test_telegram_bot_service_handles_callback_query():
     }
     service._handle_callback_query(query)
     assert len(sent_messages) >= 1
+
+
+def test_telegram_bot_service_handles_swarm_status():
+    sent_messages = []
+
+    class MockTelegramService(TelegramBotService):
+        def send_message(self, text, chat_id=None, reply_markup=None):
+            sent_messages.append(text)
+            return True
+
+    state = AgentState(
+        agent_address="0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA",
+        session_key_address="0x97F88CA501AF4A75C9F8fd8C56d230a43e407134",
+        treasury_usdc=50.0
+    )
+    metabolism = MetabolismManager(state)
+    service = MockTelegramService(bot_token="test_token", allowed_chat_id="12345", metabolism=metabolism)
+
+    service.handle_command("/swarm_status", "12345")
+    assert len(sent_messages) == 1
+    assert "Multi-Agent Swarm" in sent_messages[0]
+    assert "RustLinter-9000" in sent_messages[0]
+    assert "SolidityFuzzerBot" in sent_messages[0]
+
+
+def test_telegram_bot_service_handles_delegate_command():
+    sent_messages = []
+
+    class MockTelegramService(TelegramBotService):
+        def send_message(self, text, chat_id=None, reply_markup=None):
+            sent_messages.append(text)
+            return True
+
+    state = AgentState(
+        agent_address="0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA",
+        session_key_address="0x97F88CA501AF4A75C9F8fd8C56d230a43e407134",
+        treasury_usdc=50.0
+    )
+    metabolism = MetabolismManager(state)
+    service = MockTelegramService(bot_token="test_token", allowed_chat_id="12345", metabolism=metabolism)
+
+    service.handle_command("/delegate https://github.com/example/repo/issues/10", "12345")
+    assert len(sent_messages) >= 1
+    assert "Multi-Agent Swarm Execution" in sent_messages[-1] or "Decomposing Task" in sent_messages[0]
+

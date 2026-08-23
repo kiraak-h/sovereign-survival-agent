@@ -41,7 +41,8 @@ class TelegramBotService:
         github_solver: Optional[GitHubSolverEngine] = None,
         static_analyzer: Optional[RealSolidityStaticAnalyzer] = None,
         eas_manager: Optional[EASAttestationManager] = None,
-        auditor: Optional[Any] = None
+        auditor: Optional[Any] = None,
+        subcontracting_engine: Optional[Any] = None
     ):
         self.token = bot_token or os.getenv("TELEGRAM_BOT_TOKEN")
         self.allowed_chat_id = allowed_chat_id or os.getenv("TELEGRAM_CHAT_ID")
@@ -53,6 +54,7 @@ class TelegramBotService:
         self.static_analyzer = static_analyzer or RealSolidityStaticAnalyzer()
         self.eas_manager = eas_manager
         self.auditor = auditor
+        self.subcontracting_engine = subcontracting_engine
         
         self._is_running = False
         self._thread: Optional[threading.Thread] = None
@@ -82,6 +84,8 @@ class TelegramBotService:
                 {"command": "vitals", "description": "View treasury, ETH gas, runway & BaseScan"},
                 {"command": "scan", "description": "Scan live $50-$250 GitHub/Algora bounties"},
                 {"command": "solve", "description": "Solve a GitHub issue (/solve url)"},
+                {"command": "delegate", "description": "Delegate a bounty to peer subagent swarm (/delegate url)"},
+                {"command": "swarm_status", "description": "View active peer subagents and reputations"},
                 {"command": "audit_scan", "description": "Auto-audit verified BaseScan contracts"},
                 {"command": "audit_repo", "description": "Audit all .sol files in a GitHub repo (/audit_repo url)"},
                 {"command": "tick", "description": "Force immediate scan & solve cycle"},
@@ -157,6 +161,10 @@ class TelegramBotService:
                 "• <b>/vitals</b> - View treasury, ETH gas, runway & on-chain state\n"
                 "• <b>/scan</b> - Scan top live GitHub/Algora paid bounties (with 1-click buttons)\n"
                 "• <b>/solve &lt;url&gt;</b> - Solve a specific GitHub issue in sandbox\n"
+                "• <b>/delegate &lt;url&gt;</b> - Decompose & solve with peer subagent swarm\n"
+                "• <b>/swarm_status</b> - View active peer subagents, reputations & fees\n"
+                "• <b>/audit_scan</b> - Auto-audit verified BaseScan contracts\n"
+                "• <b>/audit_repo &lt;url&gt;</b> - Audit all .sol files in a GitHub repo\n"
                 "• <b>/tick</b> - Force an immediate metabolic & solve cycle\n"
                 "• <b>/digest</b> - Structured performance & earnings summary\n"
                 "• <b>/daemon start</b> - Turn ON 24/7 background autopilot\n"
@@ -345,9 +353,108 @@ class TelegramBotService:
         elif command == "/solve":
             self._execute_solve(args, chat_id)
 
+        elif command == "/swarm_status":
+            self._handle_swarm_status(chat_id)
+
+        elif command == "/delegate":
+            self._execute_delegate(args, chat_id)
 
         else:
             self.send_message("Unknown command. Type /help to view all commands.", chat_id)
+
+    def _handle_swarm_status(self, chat_id: str):
+        """Displays active peer subagents, specialties, fees, and active delegations."""
+        if not self.subcontracting_engine and self.metabolism:
+            try:
+                from channels.subcontracting_engine import A2ASubcontractingEngine
+                from core.policy_engine import SurvivalPolicyEngine
+                from core.wallet import SovereignWallet
+                policy = SurvivalPolicyEngine(self.metabolism.state)
+                wallet = SovereignWallet(self.metabolism.state)
+                self.subcontracting_engine = A2ASubcontractingEngine(
+                    metabolism=self.metabolism,
+                    policy=policy,
+                    wallet=wallet
+                )
+            except Exception:
+                pass
+
+        if not self.subcontracting_engine:
+            self.send_message("❌ Subcontracting engine not available.", chat_id)
+            return
+
+        peers = self.subcontracting_engine.peer_network
+        lines = [
+            "👥 <b>A2A Multi-Agent Swarm & Delegation Status:</b>\n",
+            f"• <b>Prime Contractor:</b> Sovereign Survival Agent (<code>{self.metabolism.state.agent_address[:10] if self.metabolism else '0x3C18...'}...</code>)",
+            f"• <b>Active Delegated Subcontracts:</b> {len(self.subcontracting_engine.active_subcontracts)}\n",
+            "<b>Available Peer Subagents in Swarm:</b>"
+        ]
+        for p in peers:
+            lines.append(
+                f"🤖 <b>{p.subagent_name}</b> (<code>{p.subagent_id}</code>)\n"
+                f"   • Specialty: <code>{p.specialty}</code>\n"
+                f"   • Standard Fee: ${p.fee_usdc:.2f} USDC | Rep: {p.reputation:.0f}%\n"
+            )
+        lines.append("<i>Use <code>/delegate &lt;bounty_url&gt;</code> to decompose and subcontract tasks.</i>")
+        self.send_message("\n".join(lines), chat_id)
+
+    def _execute_delegate(self, target_url: str, chat_id: str):
+        """Decomposes a bounty, hires peer subagents, validates work, and captures profit spread."""
+        if not target_url:
+            self.send_message("⚠️ Please provide a GitHub URL to delegate:\nExample: <code>/delegate https://github.com/owner/repo/issues/12</code>", chat_id)
+            return
+            
+        if not self.subcontracting_engine and self.metabolism:
+            try:
+                from channels.subcontracting_engine import A2ASubcontractingEngine
+                from core.policy_engine import SurvivalPolicyEngine
+                from core.wallet import SovereignWallet
+                policy = SurvivalPolicyEngine(self.metabolism.state)
+                wallet = SovereignWallet(self.metabolism.state)
+                self.subcontracting_engine = A2ASubcontractingEngine(
+                    metabolism=self.metabolism,
+                    policy=policy,
+                    wallet=wallet
+                )
+            except Exception:
+                pass
+
+        if not self.subcontracting_engine:
+            self.send_message("❌ Subcontracting engine not initialized.", chat_id)
+            return
+
+        self.send_message(f"👥 <b>Decomposing Task & Hiring Subagent Swarm for:</b>\n<code>{target_url}</code>...", chat_id)
+
+        from core.models import Bounty, TaskType
+        bounty_obj = Bounty(
+            bounty_id="delegated_telegram_task",
+            title=f"Solve {target_url}",
+            description=f"Multi-agent swarm delegation for {target_url}",
+            task_type=TaskType.SOLIDITY_AUDIT if ".sol" in target_url else TaskType.CODE_BUG_FIX,
+            reward_usdc=50.0,
+            deadline_ticks=30,
+            difficulty_score=0.75,
+            issuer_address="0x0000000000000000000000000000000000000000",
+            escrow_address="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+        )
+
+        success, submission, net_spread, summary = self.subcontracting_engine.execute_with_subcontractors(bounty_obj)
+        if success and submission:
+            msg = (
+                f"🎉 <b>Multi-Agent Swarm Execution Successful!</b>\n\n"
+                f"• <b>Bounty Reward:</b> ${bounty_obj.reward_usdc:.2f} USDC\n"
+                f"• <b>Subagent Spend:</b> ${bounty_obj.reward_usdc - net_spread:.2f} USDC\n"
+                f"• <b>Net Profit Spread Captured:</b> +${net_spread:.2f} USDC (<b>{(net_spread/bounty_obj.reward_usdc)*100:.1f}%</b>)\n\n"
+                f"<b>Subagent Deliverables Verified:</b>\n"
+                f"• Task ID: <code>{submission.bounty_id}</code>\n"
+                f"• Deliverable: {submission.reasoning_summary[:120]}...\n"
+                f"• Notes: {summary}\n\n"
+                f"<i>Funds protected by SovereignWallet spend guardrails.</i>"
+            )
+            self.send_message(msg, chat_id)
+        else:
+            self.send_message(f"❌ Swarm delegation could not complete: {summary}", chat_id)
 
     def _execute_solve(self, target_url: str, chat_id: str):
         """Executes sandbox solving for a specific issue URL."""

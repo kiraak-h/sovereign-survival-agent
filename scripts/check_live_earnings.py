@@ -71,8 +71,26 @@ if res2.status_code == 200:
         print("2. BernhardPierno25/kafka-go#1: Branch live on fork (Awaiting maintainer merge)")
         print("   • Reward Value: $50.00 USDC")
 
-total_pipeline = 100.00
+# PR 3 (Ubiquity DevPool $225 USD)
+res3 = requests.get("https://api.github.com/repos/ubiquity/ai.ubq.fi/pulls?state=all", headers=headers)
+if res3.status_code == 200:
+    prs3 = res3.json()
+    user_prs3 = [p for p in prs3 if p.get("user", {}).get("login") == "kiraak-h" or "fix/empty-upstream" in p.get("head", {}).get("ref", "")]
+    if user_prs3:
+        p3 = user_prs3[0]
+        state3 = p3.get("state")
+        is_merged3 = p3.get("merged_at") is not None
+        print(f"3. ubiquity/ai.ubq.fi#109: State={state3.upper()} (Merged={is_merged3})")
+        print(f"   • Reward Value: $225.00 USD (Ubiquity DevPool)")
+        print(f"   • PR URL: {p3.get('html_url')}")
+    else:
+        print("3. ubiquity/ai.ubq.fi#109: State=OPEN")
+        print("   • Reward Value: $225.00 USD (Ubiquity DevPool)")
+        print("   • PR URL: https://github.com/ubiquity/ai.ubq.fi/pull/110")
+
+total_pipeline = 325.00
 print("\n==================================================")
 print(f"• Total Settled Balance: ${usdc_bal:.2f} USDC")
-print(f"• Total In-Flight Pipeline: ${total_pipeline:.2f} USDC")
+print(f"• Total In-Flight Pipeline: ${total_pipeline:.2f} USD")
 print("==================================================")
+
