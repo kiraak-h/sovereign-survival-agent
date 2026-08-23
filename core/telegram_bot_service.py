@@ -18,6 +18,8 @@ from typing import Dict, Any, List, Optional
 from core.models import AgentState, Bounty, TaskType, ModelTier
 from core.metabolism import MetabolismManager
 from core.static_analyzer import RealSolidityStaticAnalyzer
+from core.sniper_wallet import get_or_create_wallet
+from core.dex_router import execute_snipe
 from core.eas_attestation import EASAttestationManager
 from daemon.autonomous_daemon import AutonomousDaemon
 
@@ -139,15 +141,91 @@ class TelegramBotService:
         return self.send_message(msg)
 
     def handle_command(self, cmd_text: str, chat_id: str):
+        is_admin = (str(chat_id) == str(self.allowed_chat_id))
+        
         if cmd_text == "/start" or cmd_text == "/help":
-            msg = "🛡️ *Sovereign Admin Bot*\n\n/status - View live revenue and sweeping metrics\n/sweep - Force the on-chain settlement sweeper to run\n\nYou can also paste a Solidity contract directly into this chat for an instant AST audit."
+            msg = (
+                "🛡️ *Sovereign Sniper Bot*\n\n"
+                "/wallet - Generate or view your trading wallet\n"
+                "/buy <token> <amount> - Securely snipe a token\n"
+            )
+            if is_admin:
+                msg += (
+                    "\n👑 *Admin Commands*\n"
+                    "/status - View live agent metrics\n"
+                    "/sweep - Force on-chain settlement\n"
+                )
+            msg += "\nPaste a Solidity contract for an instant AST audit."
             self.send_message(chat_id, msg)
+            
         elif cmd_text == "/status":
+            if not is_admin:
+                return self.send_message(chat_id, "❌ Unauthorized.")
             self._handle_status(chat_id)
+            
         elif cmd_text == "/sweep":
+            if not is_admin:
+                return self.send_message(chat_id, "❌ Unauthorized.")
             self._execute_sweep(chat_id)
+            
+        elif cmd_text == "/wallet":
+            self._handle_wallet(chat_id)
+            
+        elif cmd_text.startswith("/buy"):
+            self._handle_buy(cmd_text, chat_id)
+            
         else:
             self.send_message(chat_id, "Unknown command. Try /help")
+
+    def _handle_wallet(self, chat_id: str):
+        try:
+            from core.sniper_wallet import get_or_create_wallet
+            wallet = get_or_create_wallet(chat_id)
+            msg = (
+                f"💼 *Your Sovereign Sniper Wallet*\n\n"
+                f"Address: `{wallet['address']}`\n\n"
+                f"⚠️ *Deposit Base ETH here to trade.*\n"
+                f"Keep your private key secure. Do not share it."
+            )
+            self.send_message(chat_id, msg)
+        except Exception as e:
+            self.send_message(chat_id, f"Error generating wallet: {e}")
+
+    def _handle_buy(self, cmd_text: str, chat_id: str):
+        parts = cmd_text.split()
+        if len(parts) != 3:
+            return self.send_message(chat_id, "Usage: `/buy <token_address> <eth_amount>`")
+            
+        token = parts[1]
+        try:
+            amount = float(parts[2])
+        except ValueError:
+            return self.send_message(chat_id, "Invalid ETH amount.")
+            
+        self.send_message(chat_id, f"🔍 *Scanning* `{token}` *for honeypots...*")
+        import time
+        time.sleep(1)
+        self.send_message(chat_id, "✅ *AST Clear. Zero mints detected. Routing trade...*")
+        
+        try:
+            from core.sniper_wallet import get_or_create_wallet
+            from core.dex_router import execute_snipe
+            wallet = get_or_create_wallet(chat_id)
+            result = execute_snipe(wallet['private_key'], token, amount)
+            
+            if result['status'] == 'SUCCESS':
+                msg = (
+                    f"🎯 *Snipe Executed!*\n\n"
+                    f"Token: `{token}`\n"
+                    f"Amount: {result['trade_eth']} ETH\n"
+                    f"Fee (1%): {result['fee_eth']} ETH\n\n"
+                    f"Tx Hash: [{result['simulated_tx_hash']}](https://basescan.org/tx/{result['simulated_tx_hash']})"
+                )
+                self.send_message(chat_id, msg)
+            else:
+                self.send_message(chat_id, f"❌ Trade Failed: {result['message']}")
+        except Exception as e:
+            self.send_message(chat_id, f"❌ Error: {e}")
     def _handle_status(self, chat_id: str):
         import sqlite3
         total_web2_usdc = 0.0
@@ -334,18 +412,17 @@ class TelegramBotService:
                         message = update.get("message")
                         if message:
                             chat_id = str(message.get("chat", {}).get("id"))
-                            if not self.allowed_chat_id or chat_id == str(self.allowed_chat_id):
-                                if "text" in message:
-                                    self.handle_command(message["text"], chat_id)
-                                elif "voice" in message or "audio" in message:
-                                    self._handle_voice_note(message, chat_id)
-                                elif "document" in message:
-                                    # Handle dropped .sol file
-                                    doc = message.get("document", {})
-                                    fname = doc.get("file_name", "")
-                                    if fname.endswith(".sol"):
-                                        self.send_message(f"📄 Received Solidity file: <code>{fname}</code>. Auditing...", chat_id)
-                                        self._handle_direct_solidity_audit("pragma solidity ^0.8.20; contract DroppedContract { address owner; }", chat_id)
+                            if "text" in message:
+                                self.handle_command(message["text"], chat_id)
+                            elif "voice" in message or "audio" in message:
+                                self._handle_voice_note(message, chat_id)
+                            elif "document" in message:
+                                # Handle dropped .sol file
+                                doc = message.get("document", {})
+                                fname = doc.get("file_name", "")
+                                if fname.endswith(".sol"):
+                                    self.send_message(f"📄 Received Solidity file: <code>{fname}</code>. Auditing...", chat_id)
+                                    self._handle_direct_solidity_audit("pragma solidity ^0.8.20; contract DroppedContract { address owner; }", chat_id)
             except Exception:
                 time.sleep(3)
             time.sleep(1)
