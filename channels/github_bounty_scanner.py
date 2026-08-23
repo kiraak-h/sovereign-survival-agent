@@ -197,22 +197,35 @@ class GitHubBountyScanner:
         return bounties
 
     def _parse_github_issue(self, item: Dict[str, Any]) -> Optional[ScannedBounty]:
-        """Extracts reward amount, labels, and classifies task from a genuine GitHub issue JSON."""
+        """Extracts verified reward amount, labels, and classifies task from a genuine GitHub issue JSON."""
         title = item.get("title", "")
         body = item.get("body", "") or ""
         labels = [l.get("name", "") for l in item.get("labels", []) if isinstance(l, dict)]
         url = item.get("html_url", "")
-
-        # Extract dollar / USDC / ETH amount
-        reward = self._extract_reward_amount(title + " " + body + " " + " ".join(labels))
-        if reward < 5.0:
-            reward = 50.0  # Standard default bounty floor if tagged with bounty label
+        comments_url = item.get("comments_url", "")
 
         repo_match = re.search(r"github\.com/([\w-]+/[\w-]+)/issues/(\d+)", url)
         if not repo_match:
             return None
         repo_name = repo_match.group(1)
         issue_num = int(repo_match.group(2))
+
+        # Extract dollar / USDC / ETH amount from title/body
+        reward = self._extract_reward_amount(title + " " + body + " " + " ".join(labels))
+        
+        # 1. Reject unverified / zero reward issues
+        if reward <= 0:
+            return None
+
+        # 2. If issue mentions Opire, Algora, or Polar, verify via comments that reward was actually funded
+        if any(k in (title + " " + body).lower() for k in ["opire", "algora", "polar.sh", "bounty"]):
+            is_valid_reward, adjusted_reward = self._verify_issue_comments(comments_url, reward)
+            if not is_valid_reward:
+                return None
+            reward = adjusted_reward
+
+        if reward < 10.0:
+            return None
 
         task_type = self._classify_task(title + " " + body)
         difficulty = min(0.95, max(0.2, reward / 180.0))
@@ -234,21 +247,62 @@ class GitHubBountyScanner:
             created_at=item.get("created_at", datetime.now(timezone.utc).isoformat())
         )
 
+    def _verify_issue_comments(self, comments_url: str, default_reward: float) -> Tuple[bool, float]:
+        """
+        Queries issue comments to confirm reward is active and not rejected/expired by Opire/Algora bot.
+        """
+        if not comments_url:
+            return True, default_reward
+
+        try:
+            res = self.session.get(comments_url, timeout=4.0)
+            if res.status_code == 200:
+                comments = res.json()
+                for c in comments:
+                    user = (c.get("user", {}).get("login") or "").lower()
+                    body = (c.get("body") or "").lower()
+                    
+                    # Check for bot rejection / empty balance
+                    if "opirebot" in user or "algorabot" in user or "polar" in user:
+                        if any(phrase in body for phrase in [
+                            "cannot create a reward",
+                            "no rewards left",
+                            "reward expired",
+                            "reward has been refunded",
+                            "reward cancelled"
+                        ]):
+                            return False, 0.0
+                        
+                        # Extract verified reward if bot confirmed it
+                        match = re.search(r"\$\s*([0-9]+(?:\.[0-9]{1,2})?)", body)
+                        if match and "added a reward" in body:
+                            return True, float(match.group(1))
+
+        except Exception:
+            pass
+
+        return True, default_reward
+
     def _extract_reward_amount(self, text: str) -> float:
-        """Extracts dollar amounts from text using regular expressions."""
+        """Extracts explicit dollar amounts from text using strict regular expressions."""
         match_usd = re.search(r"\$\s*([0-9]+(?:\.[0-9]{1,2})?)", text)
         if match_usd:
-            return float(match_usd.group(1))
+            val = float(match_usd.group(1))
+            if val >= 5.0:
+                return val
 
         match_usdc = re.search(r"([0-9]+(?:\.[0-9]{1,2})?)\s*(?:USDC|USD|DAI|USDT)", text, re.IGNORECASE)
         if match_usdc:
-            return float(match_usdc.group(1))
+            val = float(match_usdc.group(1))
+            if val >= 5.0:
+                return val
 
         match_eth = re.search(r"([0-9]+(?:\.[0-9]{2,})?)\s*ETH", text, re.IGNORECASE)
         if match_eth:
             return round(float(match_eth.group(1)) * 2500.0, 2)
 
         return 0.0
+
 
 
     def _classify_task(self, text: str) -> TaskType:
