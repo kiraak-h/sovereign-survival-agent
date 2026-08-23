@@ -24,6 +24,20 @@ from typing import Dict, Any, List
 from fastapi import FastAPI, HTTPException, Request, Response, status, Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import secrets
+
+security = HTTPBasic()
+def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_username = secrets.compare_digest(credentials.username, "admin")
+    correct_password = secrets.compare_digest(credentials.password, "sovereign2026")
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
+
 from fastapi.responses import HTMLResponse
 
 from pydantic import BaseModel, Field
@@ -592,17 +606,7 @@ def serve_public_portal():
     with open("templates/public_portal.html", "r", encoding="utf-8") as f:
         return f.read()
 
-security = HTTPBasic()
-def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = secrets.compare_digest(credentials.username, "admin")
-    correct_password = secrets.compare_digest(credentials.password, "sovereign2026")
-    if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
+
 
 @app.get("/admin", response_class=HTMLResponse, summary="Agent Visual Console UI")
 @app.get("/console", response_class=HTMLResponse, summary="Agent Visual Console UI")
