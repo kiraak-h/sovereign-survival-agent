@@ -108,7 +108,15 @@ class AutonomousDaemon:
                 self.last_activity = f"Audit Sweep Error: {str(e)}"
                 return {"status": "ERROR", "message": self.last_activity}
                 
-        self.last_activity = f"Tick #{self.total_ticks}: Idle. Polling for A2A Contract Audit Requests."
+        # 4. Execute On-Chain Settlement (Sweep EIP-2612 USDC Permits)
+        if self.total_ticks % 2 == 0:  # Run sweeper every few ticks
+            try:
+                from scripts.sweep_permits import sweep_pending_permits
+                sweep_pending_permits()
+            except Exception as e:
+                print(f"Sweeper Execution Error: {e}")
+
+        self.last_activity = f"Tick #{self.total_ticks}: Passive surveillance mode. Rent deducted."
         return {"status": "IDLE", "audited": 0}
 
     def get_status(self) -> DaemonStatus:

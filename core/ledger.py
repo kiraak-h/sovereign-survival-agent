@@ -9,7 +9,8 @@ class PrepaidLedger:
         
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute('''
+            cursor = conn.cursor()
+            cursor.execute('''
                 CREATE TABLE IF NOT EXISTS api_keys (
                     api_key TEXT PRIMARY KEY,
                     client_name TEXT,
@@ -18,6 +19,40 @@ class PrepaidLedger:
                     tx_hash TEXT UNIQUE NOT NULL
                 )
             ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS unclaimed_permits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    payer_address TEXT NOT NULL,
+                    token_address TEXT NOT NULL,
+                    amount_usdc REAL NOT NULL,
+                    nonce INTEGER NOT NULL,
+                    deadline INTEGER NOT NULL,
+                    signature TEXT NOT NULL,
+                    status TEXT DEFAULT 'PENDING',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.commit()
+
+    def save_permit(self, permit_data: dict) -> bool:
+        """Saves a verified EIP-2612 permit to the database so the sweeper daemon can cash it later."""
+        with sqlite3.connect(self.db_path) as conn:
+            try:
+                conn.execute("""
+                    INSERT INTO unclaimed_permits 
+                    (payer_address, token_address, amount_usdc, nonce, deadline, signature) 
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    permit_data.get("payer_address"),
+                    permit_data.get("token_address"),
+                    permit_data.get("amount_usdc"),
+                    permit_data.get("nonce"),
+                    permit_data.get("deadline"),
+                    permit_data.get("signature")
+                ))
+                return True
+            except sqlite3.IntegrityError:
+                return False
             
     def generate_key(self, client_name: str, initial_deposit_usdc: float, tx_hash: str) -> str:
         api_key = f"sov_live_{secrets.token_hex(16)}"
