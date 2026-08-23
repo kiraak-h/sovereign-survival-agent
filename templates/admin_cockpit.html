@@ -31,9 +31,7 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <button onclick="toggleDaemon()" id="daemon-toggle-btn" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer">
-          ▶ Start 24/7 Autonomous Daemon
-        </button>
+        <div class="px-3.5 py-1.5 rounded-lg bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold uppercase tracking-widest flex items-center gap-2">🟢 UNSTOPPABLE 24/7 MODE</div>
         <button onclick="triggerDaemonTick()" class="px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 text-xs font-semibold transition-all">
           ⚡ Force Tick
         </button>
@@ -254,40 +252,19 @@
     }
 
     async function fetchDaemonStatus() {
-      try {
-        const res = await fetch('/v1/daemon/status');
-        const data = await res.json();
-        const stateEl = document.getElementById('daemon-state');
-        const btn = document.getElementById('daemon-toggle-btn');
-        
-        if (data.is_running) {
-          stateEl.innerText = 'ONLINE';
-          stateEl.className = 'text-2xl font-bold text-emerald-400 tracking-tight';
-          btn.innerText = '⏸ Pause 24/7 Daemon';
-          btn.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-300 text-xs font-semibold transition-all cursor-pointer';
-        } else {
-          stateEl.innerText = 'IDLE';
-          stateEl.className = 'text-2xl font-bold text-cyan-300 tracking-tight';
-          btn.innerText = '▶ Start 24/7 Autonomous Daemon';
-          btn.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer';
+        try {
+          const res = await fetch('/v1/daemon/status');
+          const data = await res.json();
+          const stateEl = document.getElementById('daemon-state');
+          if (data.is_running) {
+            stateEl.innerText = 'ONLINE';
+            stateEl.className = 'text-2xl font-bold text-emerald-400 tracking-tight';
+          }
+        } catch (e) {
+          console.error(e);
         }
-        document.getElementById('daemon-summary').innerText = `Ticks: ${data.total_ticks_completed} | Solved: ${data.bounties_solved} (+$${data.total_revenue_claimed.toFixed(2)})`;
-      } catch (e) {
-        console.error(e);
       }
-    }
 
-    async function toggleDaemon() {
-      try {
-        const statusRes = await fetch('/v1/daemon/status');
-        const data = await statusRes.json();
-        const endpoint = data.is_running ? '/v1/daemon/stop' : '/v1/daemon/start';
-        await fetch(endpoint, { method: 'POST' });
-        await fetchDaemonStatus();
-      } catch (e) {
-        alert('Daemon toggle error: ' + e.message);
-      }
-    }
 
     async function triggerDaemonTick() {
       try {

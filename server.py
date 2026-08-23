@@ -227,18 +227,10 @@ def get_daemon_status(username: str = Depends(get_current_username)):
     return _daemon.get_status().model_dump(mode="json")
 
 
-@app.post("/v1/daemon/start", summary="Start 24/7 Autonomous Daemon")
-def start_daemon(username: str = Depends(get_current_username)):
-    """Starts the background worker thread."""
-    _daemon.start()
-    return {"success": True, "status": _daemon.get_status().model_dump(mode="json")}
 
 
-@app.post("/v1/daemon/stop", summary="Stop 24/7 Autonomous Daemon")
-def stop_daemon(username: str = Depends(get_current_username)):
-    """Stops the background worker thread."""
-    _daemon.stop()
-    return {"success": True, "status": _daemon.get_status().model_dump(mode="json")}
+
+
 
 
 @app.post("/v1/daemon/tick", summary="Execute manual daemon tick")

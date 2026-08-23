@@ -72,11 +72,6 @@ class AutonomousDaemon:
         self.last_activity = "24/7 Autonomous Daemon Started"
         self.notifier.dispatch_alert("⚡ Autonomous Daemon Online", "Agent is now actively scanning for paid bounties 24/7.")
 
-    def stop(self):
-        """Stops the background worker thread."""
-        self._is_running = False
-        self.last_activity = "Autonomous Daemon Paused"
-
     def run_single_tick(self) -> Dict[str, Any]:
         """Executes a single metabolic cycle and bounty sweep."""
         self.total_ticks += 1
