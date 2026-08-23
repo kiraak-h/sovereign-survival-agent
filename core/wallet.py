@@ -117,20 +117,52 @@ class SovereignWallet:
         if permit.amount_usdc <= 0.0:
             return False, "Permit payment amount must be greater than zero"
 
-        # 3. Signature verification
-        msg_text = (
-            f"HTTP402:Pay:{permit.payer_address.lower()}:"
-            f"{permit.token_address.lower()}:{permit.amount_usdc:.4f}:{permit.nonce}:{permit.deadline}"
-        )
-        msg_hash = encode_defunct(text=msg_text)
+        # 3. True EIP-712 Signature Verification for Base Mainnet USDC
+        from eth_account.messages import encode_typed_data
+        
+        domain = {
+            "name": "USD Coin",
+            "version": "2",
+            "chainId": 8453,
+            "verifyingContract": permit.token_address
+        }
+        
+        types = {
+            "Permit": [
+                {"name": "owner", "type": "address"},
+                {"name": "spender", "type": "address"},
+                {"name": "value", "type": "uint256"},
+                {"name": "nonce", "type": "uint256"},
+                {"name": "deadline", "type": "uint256"}
+            ]
+        }
+        
+        AGENT_TREASURY = "0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA"
+        
+        message = {
+            "owner": permit.payer_address,
+            "spender": AGENT_TREASURY,
+            "value": int(permit.amount_usdc * 1e6),
+            "nonce": permit.nonce,
+            "deadline": permit.deadline
+        }
+        
+        structured_data = {
+            "types": types,
+            "primaryType": "Permit",
+            "domain": domain,
+            "message": message
+        }
+        
+        signable_message = encode_typed_data(full_message=structured_data)
 
         try:
-            recovered_signer = Account.recover_message(msg_hash, signature=permit.signature)
+            recovered_signer = Account.recover_message(signable_message, signature=permit.signature)
             if recovered_signer.lower() != permit.payer_address.lower():
-                return False, f"Signature mismatch: recovered {recovered_signer} != expected {permit.payer_address}"
-            return True, "Payment permit valid & cryptographically verified"
+                return False, f"EIP-712 Signature mismatch: recovered {recovered_signer} != expected {permit.payer_address}"
+            return True, "EIP-2612 Payment permit valid & cryptographically verified"
         except Exception as e:
-            return False, f"Signature recovery failed: {str(e)}"
+            return False, f"EIP-712 Signature recovery failed: {str(e)}"
 
     def create_mock_payment_permit(
         self,

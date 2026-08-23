@@ -1,7 +1,7 @@
 import time
 import requests
 from typing import Dict, Any, Optional
-from eth_account.messages import encode_structured_data
+from eth_account.messages import encode_typed_data
 from eth_account import Account
 
 class SovereignOracleClient:
@@ -63,7 +63,7 @@ class SovereignOracleClient:
             "message": message
         }
         
-        signable_message = encode_structured_data(structured_data)
+        signable_message = encode_typed_data(full_message=structured_data)
         signed_message = self.account.sign_message(signable_message)
         
         return {

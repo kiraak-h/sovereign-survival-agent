@@ -497,6 +497,7 @@ def a2a_audit_contract(req: A2AAuditRequest, response: Response):
     """Machine-to-machine smart contract verification for external AI agents."""
     success, res_data, status_code = _a2a_gateway.process_a2a_request(req)
     response.status_code = status_code
+    return res_data
 class GenerateKeyRequest(BaseModel):
     tx_hash: str
 
