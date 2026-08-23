@@ -236,10 +236,19 @@ class TelegramBotService:
 
         elif command == "/scan":
             if not self.scanner:
+                try:
+                    from channels.github_bounty_scanner import GitHubBountyScanner
+                    self.scanner = GitHubBountyScanner()
+                except Exception:
+                    pass
+
+            if not self.scanner:
                 self.send_message("❌ Bounty scanner not attached.", chat_id)
                 return
             self.send_message("🔍 Scanning live GitHub & Algora bounties...", chat_id)
-            bounties = self.scanner.scan_all_bounties(min_reward_usdc=20.0, limit=4)
+            bounties = self.scanner.scan_all_bounties(min_reward_usdc=10.0, limit=4)
+            if not bounties:
+                bounties = self.scanner.scan_all_bounties(min_reward_usdc=0.0, limit=4)
             if not bounties:
                 self.send_message("No open bounties matching filter criteria.", chat_id)
                 return
