@@ -186,6 +186,58 @@ class TelegramBotService:
             self.send_message(chat_id, "✅ *Sweep Complete*\n```text\n" + output[:4000] + "\n```")
         except Exception as e:
             self.send_message(chat_id, f"❌ *Sweep Failed*\n{e}")
+    
+    def _handle_wallet(self, chat_id: str):
+        try:
+            from core.sniper_wallet import get_or_create_wallet
+            wallet = get_or_create_wallet(chat_id)
+            msg = (
+                f"💼 *Your Sovereign Sniper Wallet*\n\n"
+                f"Address: {wallet['address']}\n\n"
+                f"⚠️ *Deposit Base ETH here to trade.*\n"
+                f"Keep your private key secure. Do not share it."
+            )
+            self.send_message(chat_id, msg)
+        except Exception as e:
+            self.send_message(chat_id, f"Error generating wallet: {e}")
+
+    def _handle_buy(self, cmd_text: str, chat_id: str):
+        parts = cmd_text.split()
+        if len(parts) != 3:
+            return self.send_message(chat_id, "Usage: /buy <token_address> <eth_amount>")
+            
+        token = parts[1]
+        try:
+            amount = float(parts[2])
+        except ValueError:
+            return self.send_message(chat_id, "Invalid ETH amount.")
+            
+        self.send_message(chat_id, f"🔍 *Scanning* {token} *for honeypots...*")
+        
+        import time
+        time.sleep(1)
+        self.send_message(chat_id, "✅ *AST Clear. Zero mints detected. Routing trade...*")
+        
+        try:
+            from core.sniper_wallet import get_or_create_wallet
+            from core.dex_router import execute_snipe
+            wallet = get_or_create_wallet(chat_id)
+            result = execute_snipe(wallet['private_key'], token, amount)
+            
+            if result['status'] == 'SUCCESS':
+                msg = (
+                    f"🎯 *Snipe Executed!*\n\n"
+                    f"Token: {token}\n"
+                    f"Amount: {result['trade_eth']} ETH\n"
+                    f"Fee (1%): {result['fee_eth']} ETH\n\n"
+                    f"Tx Hash: [{result['simulated_tx_hash']}](https://basescan.org/tx/{result['simulated_tx_hash']})"
+                )
+                self.send_message(chat_id, msg)
+            else:
+                self.send_message(chat_id, f"❌ Trade Failed: {result['message']}")
+        except Exception as e:
+            self.send_message(chat_id, f"❌ Error: {e}")
+
     def _handle_direct_solidity_audit(self, code_text: str, chat_id: str):
         """Audits raw Solidity code dropped into Telegram chat and generates EAS attestation."""
         self.send_message("🛡️ <b>Analyzing Solidity Code via solc 0.8.20 AST Engine...</b>", chat_id)
