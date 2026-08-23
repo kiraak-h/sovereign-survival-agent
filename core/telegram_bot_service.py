@@ -120,6 +120,10 @@ class TelegramBotService:
             if reply_markup:
                 payload["reply_markup"] = reply_markup
             res = requests.post(url, json=payload, timeout=8.0)
+            if res.status_code != 200:
+                # If HTML parsing failed due to raw unescaped chars, retry with plain text
+                payload.pop("parse_mode", None)
+                res = requests.post(url, json=payload, timeout=8.0)
             return res.status_code == 200
         except Exception:
             return False
@@ -264,13 +268,15 @@ class TelegramBotService:
                 for i, b in enumerate(bounties, 1)
             ]
 
+            import html
             lines = ["📡 <b>Top Live Paid Bounties:</b>\n"]
             keyboard_buttons = []
 
             for item in self._cached_bounties:
+                clean_title = html.escape(item['title'][:45])
                 lines.append(
                     f"<b>{item['index']}. ${item['reward_usdc']:.0f} USDC</b> - <code>{item['target']}</code>\n"
-                    f"   <b>Title:</b> {item['title'][:40]}...\n"
+                    f"   <b>Title:</b> {clean_title}...\n"
                     f"   🔗 <a href='{item['url']}'>View Issue ↗</a>\n"
                 )
                 keyboard_buttons.append([
