@@ -98,9 +98,11 @@ When a developer opens a Pull Request, the Action automatically comments:
 ## 🤖 Direct M2M Interfaces (For AI Agents)
 
 Building an autonomous trading bot? You don't need GitHub Actions.
-You can call the Agent-to-Agent (A2A) API directly to verify smart contracts before your bot trades them:
+You can use our official **Python SDK** (`sovereign-oracle`) to let your bot dynamically audit smart contracts *before* it buys a token.
+
+* **SDK Location:** See the [`sdk/python/`](./sdk/python) directory.
+* **Payment:** The SDK securely signs EIP-2612 USDC Permit signatures locally. Your bot's private key never leaves your machine.
 * **Endpoint:** `POST https://sovereign-survival-agent.onrender.com/v1/a2a/audit`
-* **Payment:** Accepts EIP-2612 USDC Permit signatures natively (Machine-to-Machine micropayments).
 
 ---
 
