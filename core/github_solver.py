@@ -33,9 +33,12 @@ class PullRequestPayload(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+from core.diff_safety_guard import DiffSafetyGuard, DiffValidationResult
+
+
 class GitHubSolverEngine:
     """
-    Sandboxed coding and pull request dispatch engine.
+    Sandboxed coding and pull request dispatch engine with strict Diff Safety enforcement.
     """
 
     def __init__(self, agent_address: str, github_token: str | None = None):
@@ -63,14 +66,19 @@ class GitHubSolverEngine:
             # 2. Synthesize fix based on task type
             patch_content, solution_summary = self._synthesize_patch(bounty, sandbox_path)
             
-            # 3. Format structured PR Body with Proof-of-Work & On-Chain Payout claim
+            # 3. Pre-flight Diff Safety Check
+            guard_res = DiffSafetyGuard.validate_patch(patch_content)
+            if not guard_res.is_safe:
+                return False, None, f"Patch rejected by DiffSafetyGuard: {'; '.join(guard_res.rejection_reasons)}"
+
+            # 4. Format structured PR Body with Proof-of-Work & On-Chain Payout claim
             pr_body = (
                 f"## [AUTONOMOUS] Solution by Sovereign Agent (Homo Economicus AI)\n\n"
                 f"**Bounty ID**: `{bounty.bounty_id}`  \n\n"
                 f"**Resolution Summary**: {solution_summary}  \n\n"
                 f"### Verification Checks\n"
                 f"- [x] Static AST & Security Analysis Passed\n"
-                f"- [x] Gas & Opcode Optimization Validated\n"
+                f"- [x] Diff Safety & Anti-Destruction Linter Passed (0 corrupted files)\n"
                 f"- [x] Zero Regressions on Existing Suites\n\n"
                 f"---\n"
                 f"**Claiming Escrow Payout**:  \n"
@@ -89,7 +97,7 @@ class GitHubSolverEngine:
                 target_payout_address=self.agent_address
             )
 
-            # 4. Dispatch live if token available
+            # 5. Dispatch live if token available
             dispatch_info = self.dispatch_pull_request(pr)
             if dispatch_info.get("live_dispatch"):
                 pr.html_url = dispatch_info.get("pr_url")
@@ -99,8 +107,18 @@ class GitHubSolverEngine:
 
     def dispatch_pull_request(self, pr: PullRequestPayload) -> Dict[str, Any]:
         """
-        Dispatches the PR to GitHub API or generates dry-run preview if unauthenticated.
+        Dispatches the PR to GitHub API with pre-flight Diff Safety Verification.
         """
+        # Strict Pre-flight Diff Safety Verification
+        guard_res = DiffSafetyGuard.validate_patch(pr.diff_patch)
+        if not guard_res.is_safe:
+            return {
+                "live_dispatch": False,
+                "mode": "BLOCKED_BY_DIFF_SAFETY_GUARD",
+                "error": f"Diff Safety Guardrail blocked dispatch: {'; '.join(guard_res.rejection_reasons)}",
+                "rejection_reasons": guard_res.rejection_reasons
+            }
+
         if not self.github_token:
             preview_url = f"https://github.com/{pr.repo_owner}/{pr.repo_name}/pull/new/{pr.branch_name}"
             return {
@@ -109,6 +127,7 @@ class GitHubSolverEngine:
                 "pr_preview_url": preview_url,
                 "note": "Verified locally in sandbox. Provide GITHUB_TOKEN in .env.agent for automatic remote push."
             }
+
 
         try:
             # Call GitHub REST API to create PR
