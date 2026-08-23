@@ -98,6 +98,9 @@ class A2AGateway:
                     "error": f"HTTP 402 Payment Required: Insufficient fee. Minimum is {self.BASE_FEE_USDC} USDC.",
                     "provided_fee_usdc": fee_to_charge
                 }, 402
+            
+            # Save the valid permit to the database so the sweeper daemon can pull the USDC on-chain
+            self.ledger.save_permit(req.payment_permit.model_dump())
             payment_source = f"EIP-2612 Permit ({req.client_agent_id})"
             
         else:

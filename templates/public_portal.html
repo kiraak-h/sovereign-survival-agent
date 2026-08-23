@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sovereign Agent | Smart Contract Security Oracle</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #030712; color: #F9FAFB; font-family: system-ui, -apple-system, sans-serif; }
+    .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(55, 65, 81, 0.5); }
+    .glow { box-shadow: 0 0 40px rgba(16, 185, 129, 0.1); }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+  <nav class="border-b border-gray-800 bg-gray-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3 font-bold text-lg tracking-tight">
+        <span class="text-emerald-500">🧬 Sovereign</span> Agent
+      </div>
+      <div class="flex items-center gap-4 text-sm font-medium">
+        <a href="#github-actions" class="hover:text-emerald-400 transition-colors">GitHub Actions</a>
+        <a href="#m2m-sdk" class="hover:text-emerald-400 transition-colors">Python SDK</a>
+        <a href="/docs" class="hover:text-emerald-400 transition-colors">API Docs</a>
+        <a href="/admin" class="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-xs text-gray-300">Admin</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-6 pt-16 space-y-24">
+    <!-- Hero -->
+    <section class="text-center space-y-6">
+      <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+        Autonomous Security <br/> for the Web3 Era.
+      </h1>
+      <p class="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto">
+        The only AI oracle on Base L2 that cryptographically audits smart contracts and signs its own EIP-2612 micro-transactions.
+      </p>
+    </section>
+
+    <!-- Sandbox -->
+    <section class="glass rounded-2xl p-8 glow">
+      <h2 class="text-2xl font-bold mb-4">Try the Live Sandbox</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-2">Solidity Source Code</label>
+          <textarea id="sandbox-code" rows="10" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-4 font-mono text-sm text-gray-300 focus:outline-none focus:border-emerald-500 transition-colors" placeholder="pragma solidity ^0.8.20;..."></textarea>
+          <button onclick="runAudit()" id="audit-btn" class="mt-4 w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all">Run Security Audit</button>
+        </div>
+        <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 overflow-auto">
+          <div class="text-sm font-medium text-gray-400 mb-2">Audit Results</div>
+          <pre id="audit-result" class="text-xs font-mono text-gray-500 whitespace-pre-wrap">Awaiting input...</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Products -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Web2 Developer -->
+      <div class="glass rounded-2xl p-8" id="github-actions">
+        <h2 class="text-2xl font-bold mb-2">CI/CD Developer Portal</h2>
+        <p class="text-gray-400 mb-6">Buy a  prepaid API key to secure your GitHub Actions pipeline.</p>
+        <div class="bg-gray-900 rounded-lg p-4 text-xs font-mono text-gray-400 mb-6">
+          1. Send exactly 50 USDC on Base Mainnet to:<br/>
+          <span class="text-emerald-400 select-all">0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA</span>
+        </div>
+        <div class="space-y-4">
+          <input type="text" id="tx-hash-input" placeholder="0x... (Transaction Hash)" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 text-white focus:outline-none focus:border-emerald-500" />
+          <button onclick="generateApiKey()" id="gen-key-btn" class="w-full py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition-all">Mint API Key</button>
+          <div id="api-key-result" class="text-xs break-all"></div>
+        </div>
+      </div>
+
+      <!-- Web3 M2M -->
+      <div class="glass rounded-2xl p-8" id="m2m-sdk">
+        <h2 class="text-2xl font-bold mb-2">M2M Python SDK</h2>
+        <p class="text-gray-400 mb-6">Let your AI trading bot audit tokens before buying. .25 per audit via EIP-2612.</p>
+        <div class="bg-gray-900 border border-gray-700 rounded-lg p-4 font-mono text-sm text-gray-300">
+          $ pip install sovereign-oracle
+        </div>
+        <div class="mt-6 space-y-2 text-sm text-gray-400">
+          <p>✓ Zero private key exposure</p>
+          <p>✓ Native EIP-712 typed data signing</p>
+          <p>✓ Asynchronous EAS verifications</p>
+        </div>
+        <a href="https://pypi.org/project/sovereign-oracle/" target="_blank" class="inline-block mt-6 px-4 py-2 rounded border border-gray-600 hover:border-gray-400 text-sm font-medium transition-colors">View on PyPI ↗</a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    async function generateApiKey() {
+      const btn = document.getElementById('gen-key-btn');
+      const resBox = document.getElementById('api-key-result');
+      const txInput = document.getElementById('tx-hash-input').value.trim();
+      
+      if(!txInput) return alert("Enter Tx Hash");
+      btn.innerText = "Verifying on Base Mainnet...";
+      
+      try {
+        const res = await fetch('/v1/keys/generate', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tx_hash: txInput })
+        });
+        
+        if (!res.ok) {
+            const errText = await res.text();
+            let errMsg = "Failed to verify transaction";
+            try { errMsg = JSON.parse(errText).detail; } catch (e) {}
+            throw new Error(errMsg);
+        }
+        
+        const data = await res.json();
+        resBox.innerHTML = <div class="text-emerald-400 font-bold mb-2">✅ Success!</div>
+          <div class="p-3 bg-gray-800 rounded border border-gray-700 select-all font-mono text-cyan-300"></div>;
+      } catch (e) {
+        resBox.innerHTML = <div class="text-red-400 font-bold">❌ Error: </div>;
+      } finally {
+        btn.innerText = "Mint API Key";
+      }
+    }
+
+    async function runAudit() {
+      const code = document.getElementById('sandbox-code').value.trim();
+      if(!code) return alert("Enter code");
+      const out = document.getElementById('audit-result');
+      out.innerHTML = "Analyzing AST...";
+      
+      try {
+        const permitRes = await fetch('/v1/mock/create-permit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            payer_private_key: '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join(''),
+            amount_usdc: 0.25
+          })
+        });
+        const permit = await permitRes.json();
+
+        const auditRes = await fetch('/v1/audit/smart-contract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: code,
+            payer_address: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f',
+            payment_permit: permit,
+            target_contract_name: 'Sandbox.sol'
+          })
+        });
+
+        const data = await auditRes.json();
+        out.innerHTML = JSON.stringify(data, null, 2);
+      } catch (e) {
+        out.innerHTML = "Error: " + e.message;
+      }
+    }
+  </script>
+</body>
+</html>

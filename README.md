@@ -1,7 +1,7 @@
 # 🛡️ Sovereign AI — Smart Contract Security Audit (Base L2)
 
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Sovereign_AI_Audit-blue?logo=github&style=flat-square)](https://github.com/marketplace/actions/sovereign-ai-smart-contract-security-audit)
-[![Base Mainnet](https://img.shields.io/badge/Base_Mainnet-Active_L2-0052FF?logo=coinbase&style=flat-square)](https://basescan.org/address/0x9c59FdB0153325af6d28164832C224C1DE12e4A5)
+[![Base Mainnet](https://img.shields.io/badge/Base_Mainnet-Active_L2-0052FF?logo=coinbase&style=flat-square)](https://basescan.org/address/0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA)
 [![EAS Attested](https://img.shields.io/badge/EAS_Attested-Base_L2-brightgreen?style=flat-square)](https://base-sepolia.easscan.org)
 [![Tests](https://img.shields.io/badge/Tests-61%20Passed%20(100%25)-success?style=flat-square)](https://github.com/kiraak-h/sovereign-survival-agent)
 
