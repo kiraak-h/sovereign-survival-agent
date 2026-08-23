@@ -691,6 +691,13 @@ def serve_console():
         <div class="text-xs text-slate-400" id="daemon-summary">Auto-scan every 5 mins</div>
       </div>
 
+      
+      <div class="card p-5 rounded-xl space-y-2">
+        <div class="text-slate-400 text-xs font-medium">Total Realized Revenue</div>
+        <div class="text-2xl font-bold text-yellow-300 tracking-tight" id="metrics-revenue">0.00 <span class="text-xs font-normal text-slate-400">USDC</span></div>
+        <div class="text-xs text-slate-400" id="metrics-summary">Pending Permits: 0</div>
+      </div>
+
       <div class="card p-5 rounded-xl space-y-2">
         <div class="text-slate-400 text-xs font-medium">Survival Runway</div>
         <div class="text-2xl font-bold text-amber-300 tracking-tight" id="runway-val">628.9 <span class="text-xs font-normal text-slate-400">Hours</span></div>
@@ -824,6 +831,20 @@ def serve_console():
       }
     }
 
+    
+    async function fetchMetrics() {
+      try {
+        const res = await fetch('/v1/metrics');
+        const data = await res.json();
+        if (data.total_realized_revenue_usdc !== undefined) {
+          document.getElementById('metrics-revenue').innerHTML = data.total_realized_revenue_usdc.toFixed(2) + ' <span class="text-xs font-normal text-slate-400">USDC</span>';
+          document.getElementById('metrics-summary').innerText = 'Un-cashed Permits: ' + data.web3.pending_permits;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     async function fetchDaemonStatus() {
       try {
         const res = await fetch('/v1/daemon/status');
@@ -865,6 +886,7 @@ def serve_console():
         const res = await fetch('/v1/daemon/tick', { method: 'POST' });
         const data = await res.json();
         await fetchVitals();
+      await fetchMetrics();
         await fetchDaemonStatus();
         await generateApiKey();
         alert('Manual Tick Processed: ' + JSON.stringify(data.result));
@@ -945,6 +967,7 @@ def serve_console():
           `;
         }
         await fetchVitals();
+      await fetchMetrics();
       } finally {
         btn.innerText = '🚀 Broadcast On-Chain (Base L2)';
       }
@@ -1019,6 +1042,7 @@ def serve_console():
           ` : ''}
         `;
         await fetchVitals();
+      await fetchMetrics();
       } catch (e) {
         out.classList.remove('hidden');
         out.innerHTML = `<div class="text-red-400 text-xs">Audit Error: ${e.message}</div>`;
