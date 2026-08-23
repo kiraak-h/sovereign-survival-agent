@@ -219,6 +219,7 @@ class TelegramBotService:
                 self.send_message(f"❌ Trade Failed: {result['message']}", chat_id)
         except Exception as e:
             self.send_message(f"❌ Error: {e}", chat_id)
+
     def _handle_status(self, chat_id: str):
         import sqlite3
         total_web2_usdc = 0.0
@@ -228,7 +229,7 @@ class TelegramBotService:
             with sqlite3.connect("treasury_ledger.db") as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                cursor.execute("SELECT SUM(credits_usdc) FROM api_keys")
+                cursor.execute("SELECT SUM(balance_usdc) FROM api_keys")
                 row = cursor.fetchone()
                 if row[0]: total_web2_usdc = row[0]
                 cursor.execute("SELECT status, COUNT(*), SUM(amount_usdc) FROM unclaimed_permits GROUP BY status")
@@ -237,10 +238,11 @@ class TelegramBotService:
                         total_web3_usdc += (row[2] or 0.0)
                     elif row["status"] == "PENDING":
                         pending_count += row[1]
-            msg = "🤖 *Sovereign Agent Status*\n\n💰 *Total Revenue:* $" + f"{(total_web2_usdc + total_web3_usdc):.2f}" + " USDC\n├ Web2 API Keys: $" + f"{total_web2_usdc:.2f}" + "\n└ Web3 M2M: $" + f"{total_web3_usdc:.2f}" + "\n\n🧹 *Pending Sweeps:* " + str(pending_count) + " un-cashed EIP-2612 permits\n🟢 *Daemon:* UNSTOPPABLE 24/7"
+            msg = "📊 *Sovereign Agent Status*\n\n💰 *Total Revenue:* $" + f"{(total_web2_usdc + total_web3_usdc):.2f}" + " USDC\n• Web2 API Keys: $" + f"{total_web2_usdc:.2f}" + "\n• Web3 M2M: $" + f"{total_web3_usdc:.2f}" + "\n\n⏳ *Pending Sweeps:* " + str(pending_count) + " un-cashed EIP-2612 permits\n🤖 *Daemon:* UNSTOPPABLE 24/7"
             self.send_message(msg, chat_id)
         except Exception as e:
             self.send_message(f"Error fetching status: {e}", chat_id)
+
     def _execute_sweep(self, chat_id: str):
         self.send_message("🧹 *Initiating On-Chain Sweep...*", chat_id)
         try:
