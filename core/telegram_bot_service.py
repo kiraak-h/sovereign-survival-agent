@@ -249,12 +249,19 @@ class TelegramBotService:
             if not self.scanner:
                 self.send_message("❌ Bounty scanner not attached.", chat_id)
                 return
-            self.send_message("🔍 Scanning live GitHub & Algora bounties...", chat_id)
+                
+            self.send_message(
+                "🔍 <b>Live Bounty Scanner Active:</b>\n"
+                "• Querying GitHub Search API (label:bounty, reward, algora)...\n"
+                "• Checking On-Chain Escrow Smart Contracts (Opire, Algora, Polar)...\n"
+                "• Filtering Out Aggregator Bots & Test Repositories...",
+                chat_id
+            )
             bounties = self.scanner.scan_all_bounties(min_reward_usdc=10.0, limit=4)
             if not bounties:
                 bounties = self.scanner.scan_all_bounties(min_reward_usdc=0.0, limit=4)
             if not bounties:
-                self.send_message("No open bounties matching filter criteria.", chat_id)
+                self.send_message("⚠️ No open funded bounties found matching filter criteria right now. Use <code>/solve &lt;url&gt;</code> to solve any specific issue directly.", chat_id)
                 return
             
             self._cached_bounties = [

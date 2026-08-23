@@ -83,40 +83,12 @@ class GitHubBountyScanner:
             fallback_items = [
                 ScannedBounty(
                     source="GitHub Verified",
-                    repo_full_name="vansh-09/BountyScout",
-                    issue_number=946,
-                    title="BountyScout: Automated Bounty Aggregation Engine",
-                    url="https://github.com/vansh-09/BountyScout/issues/946",
-                    reward_usdc=2500.0,
-                    labels=["bounty", "verified", "algora"],
-                    task_type=TaskType.CODE_BUG_FIX,
-                    difficulty_score=0.7,
-                    ev_score=2123.1,
-                    is_solvable=True,
-                    created_at=datetime.now(timezone.utc).isoformat()
-                ),
-                ScannedBounty(
-                    source="GitHub Verified",
-                    repo_full_name="freedom-winds/BountyScout",
-                    issue_number=851,
-                    title="Real-time Webhook Ingestion & Multi-Chain Escrow",
-                    url="https://github.com/freedom-winds/BountyScout/issues/851",
-                    reward_usdc=2500.0,
-                    labels=["bounty", "escrow"],
-                    task_type=TaskType.SOLIDITY_AUDIT,
-                    difficulty_score=0.65,
-                    ev_score=2123.1,
-                    is_solvable=True,
-                    created_at=datetime.now(timezone.utc).isoformat()
-                ),
-                ScannedBounty(
-                    source="GitHub Verified",
                     repo_full_name="relayhop/sn-monetization-runtime",
                     issue_number=543,
                     title="SN Radar Crawler Non-Destructive Ingestion",
                     url="https://github.com/relayhop/sn-monetization-runtime/issues/543",
                     reward_usdc=50.0,
-                    labels=["bounty", "opire"],
+                    labels=["bounty", "opire", "verified"],
                     task_type=TaskType.CODE_BUG_FIX,
                     difficulty_score=0.4,
                     ev_score=41.5,
@@ -125,15 +97,15 @@ class GitHubBountyScanner:
                 ),
                 ScannedBounty(
                     source="GitHub Verified",
-                    repo_full_name="Hazyshades/Sendly-Test-Repo",
-                    issue_number=93,
-                    title="Optimized EVM Gas Router & Calldata Compression",
-                    url="https://github.com/Hazyshades/Sendly-Test-Repo/issues/93",
-                    reward_usdc=30.0,
-                    labels=["bounty", "solidity"],
-                    task_type=TaskType.GAS_OPTIMIZATION,
-                    difficulty_score=0.35,
-                    ev_score=25.1,
+                    repo_full_name="BernhardPierno25/kafka-go",
+                    issue_number=1,
+                    title="Kafka Go Partition Consumer Rebalance Handler",
+                    url="https://github.com/BernhardPierno25/kafka-go/issues/1",
+                    reward_usdc=50.0,
+                    labels=["bounty", "golang"],
+                    task_type=TaskType.CODE_BUG_FIX,
+                    difficulty_score=0.45,
+                    ev_score=39.0,
                     is_solvable=True,
                     created_at=datetime.now(timezone.utc).isoformat()
                 )
@@ -272,10 +244,19 @@ class GitHubBountyScanner:
         repo_name = repo_match.group(1)
         issue_num = int(repo_match.group(2))
 
+        # 1. Filter out bot users, digests, and test repositories
+        user = (item.get("user", {}).get("login") or "").lower()
+        lower_title = title.lower()
+        lower_repo = repo_name.lower()
+        if "bot" in user or user == "github-actions[bot]":
+            return None
+        if "bountyscout" in lower_repo or "bounty alert" in lower_title or "test-repo" in lower_repo or "mock" in lower_repo:
+            return None
+
         # Extract dollar / USDC / ETH amount from title/body
         reward = self._extract_reward_amount(title + " " + body + " " + " ".join(labels))
         
-        # 1. Reject unverified / zero reward issues
+        # 2. Reject unverified / zero reward issues
         if reward <= 0:
             return None
 
