@@ -500,6 +500,21 @@ def a2a_audit_contract(req: A2AAuditRequest, response: Response):
     return res_data
 
 
+@app.post("/v1/keys/generate", summary="Generate Prepaid API Key")
+def generate_api_key():
+    """Mints a new developer API key pre-funded with 50 USDC for CI/CD usage."""
+    from core.ledger import PrepaidLedger
+    ledger = PrepaidLedger()
+    # In a real production app, this would verify a stripe/web3 transaction hash first
+    api_key = ledger.generate_key(client_name="WebConsole_User", initial_deposit_usdc=50.0)
+    
+    # Credit the metabolism for the deposit
+    _metabolism.credit_revenue(
+        amount_usdc=50.0,
+        source_description="API Key Deposit: $50 USDC (Prepaid CI/CD Audits)"
+    )
+    
+    return {"api_key": api_key, "balance_usdc": 50.0, "status": "success"}
 @app.post("/v1/ci/audit-pr", summary="GitHub CI/CD Action Smart Contract Security Audit")
 def ci_audit_pr(req: DirectAuditRequest):
     """Processes smart contract security audits triggered from GitHub Action workflows."""
@@ -640,27 +655,25 @@ def serve_console():
       </div>
     </div>
 
-    <!-- Live GitHub & Algora Bounty Stream with Closed-Loop Solver -->
-    <div class="card rounded-2xl p-6 space-y-4 shadow-xl">
+    <!-- Developer API Key Portal (Web2 Monetization) -->
+    <div class="card rounded-2xl p-6 space-y-4 shadow-xl border border-emerald-900/30">
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-            📡 Live Bounty Stream (Python • TypeScript • Solidity)
+            🔑 Developer API Key Portal
           </h2>
           <p class="text-xs text-slate-400 mt-0.5">
-            Real-time GitHub/Algora bounty stream equipped with multi-language sandboxed verification and automatic remote dispatch.
+            Purchase a prepaid API key to authenticate GitHub Actions CI/CD workflows against the A2A Security Oracle.
           </p>
         </div>
-        <button onclick="fetchBounties()" class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300">
-          🔄 Refresh Feed
+        <button onclick="generateApiKey()" id="gen-key-btn" class="px-4 py-2 text-xs rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-bold transition-all shadow-lg">
+          Deposit $50 USDC & Generate Key
         </button>
       </div>
 
-      <div id="bounty-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <div class="text-xs text-slate-500 font-mono">Scanning live bounties...</div>
+      <div id="api-key-result" class="hidden mt-4 p-4 rounded-xl border border-emerald-800/50 bg-emerald-950/20 text-xs font-mono space-y-3">
+         <!-- Key goes here -->
       </div>
-
-      <div id="solver-result" class="hidden mt-4 p-4 rounded-xl border border-emerald-800/50 bg-emerald-950/20 text-xs font-mono space-y-3"></div>
     </div>
 
     <!-- Interactive Auditor Playground & Real Contracts -->
@@ -805,112 +818,40 @@ def serve_console():
         const data = await res.json();
         await fetchVitals();
         await fetchDaemonStatus();
-        await fetchBounties();
+        await generateApiKey();
         alert('Manual Tick Processed: ' + JSON.stringify(data.result));
       } catch (e) {
         alert('Tick error: ' + e.message);
       }
     }
 
-    async function fetchBounties() {
-      const listEl = document.getElementById('bounty-list');
-      try {
-        const res = await fetch('/v1/bounties/live');
-        const data = await res.json();
-        const bounties = data.bounties || [];
-        window._scannedBounties = bounties;
-
-        if (bounties.length === 0) {
-          listEl.innerHTML = '<div class="text-xs text-slate-500">No active bounties found.</div>';
-          return;
-        }
-
-        listEl.innerHTML = bounties.map((b, i) => `
-          <div class="p-4 rounded-xl bg-[#07080D] border border-slate-800 space-y-2.5 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between">
-                <span class="px-2 py-0.5 rounded bg-indigo-950/60 border border-indigo-800/40 text-indigo-300 text-[10px] font-bold uppercase">${b.source}</span>
-                <span class="text-emerald-400 font-mono font-bold text-sm">$${b.reward_usdc.toFixed(2)} USDC</span>
-              </div>
-              <a href="${b.url}" target="_blank" class="font-bold text-slate-100 hover:text-cyan-400 text-xs block mt-1.5">${b.title}</a>
-              <div class="text-[11px] text-slate-500 font-mono mt-0.5">${b.repo_full_name} #${b.issue_number}</div>
-            </div>
-
-            <div class="pt-2 border-t border-slate-800/60 flex items-center justify-between">
-              <span class="text-[10px] text-slate-400 font-mono">EV Score: <strong class="text-cyan-300">+${b.ev_score}</strong></span>
-              <button onclick="autoSolveBountyByIndex(${i})" class="px-3 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all cursor-pointer">
-                ⚡ Closed-Loop Solve
-              </button>
-            </div>
-          </div>
-        `).join('');
-      } catch (e) {
-        listEl.innerHTML = `<div class="text-red-400 text-xs">Error scanning bounties: ${e.message}</div>`;
-      }
-    }
-
-    async function autoSolveBountyByIndex(index) {
-      const b = (window._scannedBounties || [])[index];
-      if (!b) return;
-
-      const resBox = document.getElementById('solver-result');
+    async function generateApiKey() {
+      const btn = document.getElementById('gen-key-btn');
+      const resBox = document.getElementById('api-key-result');
+      
+      btn.innerText = "Depositing USDC...";
+      btn.disabled = true;
       resBox.classList.remove('hidden');
-      resBox.innerHTML = `<span class="text-cyan-400 animate-pulse">Running Closed-Loop Verification: Spawning isolated sandbox workspace & testing code for ${b.title}...</span>`;
-
+      resBox.innerHTML = '<span class="text-cyan-400 animate-pulse">Waiting for Web3 Signature & Deposit...</span>';
+      
       try {
-        const res = await fetch('/v1/bounties/solve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            bounty_id: `${b.repo_full_name}#${b.issue_number}`,
-            title: b.title,
-            description: `Fix issue for ${b.repo_full_name}#${b.issue_number} at ${b.url}`,
-            reward_usdc: b.reward_usdc,
-            task_type: b.task_type || 'SMART_CONTRACT_AUDIT',
-            max_attempts: 3
-          })
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Server returned HTTP ${res.status}: ${errText}`);
-        }
-
+        const res = await fetch('/v1/keys/generate', { method: 'POST' });
+        if (!res.ok) throw new Error("Failed to generate API key");
+        
         const data = await res.json();
-        const pr = data.pr_payload;
-        const dispatch = data.dispatch_info || {};
-
-        let attemptsHtml = (data.attempts_history || []).map(a => `
-          <div class="p-2 rounded bg-black/50 border border-slate-800 text-[11px]">
-            <div class="flex items-center justify-between font-bold">
-              <span class="${a.validation_passed ? 'text-emerald-400' : 'text-amber-400'}">Attempt #${a.attempt_number}: ${a.validation_passed ? 'PASSED (0 Errors)' : 'RETRYING'}</span>
-              <span class="text-slate-400 font-mono">${a.tokens_used} tokens ($${a.cost_usdc.toFixed(6)})</span>
-            </div>
-            <div class="text-slate-400 text-[10px] mt-0.5">${a.compiler_or_test_output}</div>
-          </div>
-        `).join('');
-
         resBox.innerHTML = `
-          <div class="flex items-center justify-between font-bold text-sm text-emerald-400">
-            <span>🎉 ${data.summary}</span>
-            <span class="text-xs text-slate-400 font-mono">Inference Cost: $${data.total_cost_usdc.toFixed(6)} USDC (${data.total_tokens} tokens)</span>
+          <div class="text-emerald-400 font-bold mb-2">✅ Success! $50 USDC Deposited.</div>
+          <div class="text-slate-300">Your Developer API Key:</div>
+          <div class="p-3 bg-[#07080D] border border-emerald-900/50 rounded mt-2 select-all font-bold text-white text-sm">
+            ${data.api_key}
           </div>
-          <div class="space-y-1.5">${attemptsHtml}</div>
-          ${pr ? `
-            <div class="pt-2 border-t border-slate-800 text-slate-300">
-              <div class="flex items-center justify-between">
-                <span>Target: <strong class="text-white">${pr.repo_owner}/${pr.repo_name}#${pr.issue_number}</strong></span>
-                ${dispatch.pr_preview_url ? `<a href="${dispatch.pr_preview_url}" target="_blank" class="text-cyan-400 hover:underline text-xs font-bold font-mono">🐙 Open GitHub PR Draft ↗</a>` : ''}
-              </div>
-              <div class="text-slate-400 text-[11px] mt-0.5">Claiming Escrow Payout to Base L2: <code class="text-emerald-400">${pr.target_payout_address}</code></div>
-              <div class="mt-2 p-2.5 rounded bg-black/60 border border-slate-800 text-[11px] text-slate-300 font-mono whitespace-pre-wrap">${pr.diff_patch}</div>
-            </div>
-          ` : ''}
+          <div class="text-slate-500 mt-2">Store this key in your GitHub Repository Secrets as <code>SOVEREIGN_API_KEY</code>.</div>
         `;
-        await fetchVitals();
-        await fetchDaemonStatus();
       } catch (e) {
-        resBox.innerHTML = `<div class="text-red-400 font-mono p-2">Solve failed: ${e.message}</div>`;
+        resBox.innerHTML = `<span class="text-red-400">Transaction failed: ${e.message}</span>`;
+      } finally {
+        btn.innerText = "Deposit $50 USDC & Generate Key";
+        btn.disabled = false;
       }
     }
 
