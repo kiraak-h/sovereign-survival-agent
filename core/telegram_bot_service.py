@@ -17,12 +17,9 @@ import json
 from typing import Dict, Any, List, Optional
 from core.models import AgentState, Bounty, TaskType, ModelTier
 from core.metabolism import MetabolismManager
-from core.self_correcting_solver import SelfCorrectingSolver
-from core.github_solver import GitHubSolverEngine
 from core.static_analyzer import RealSolidityStaticAnalyzer
 from core.eas_attestation import EASAttestationManager
 from daemon.autonomous_daemon import AutonomousDaemon
-from channels.github_bounty_scanner import GitHubBountyScanner
 
 
 class TelegramBotService:
@@ -36,9 +33,6 @@ class TelegramBotService:
         allowed_chat_id: Optional[str] = None,
         metabolism: Optional[MetabolismManager] = None,
         daemon: Optional[AutonomousDaemon] = None,
-        scanner: Optional[GitHubBountyScanner] = None,
-        solver: Optional[SelfCorrectingSolver] = None,
-        github_solver: Optional[GitHubSolverEngine] = None,
         static_analyzer: Optional[RealSolidityStaticAnalyzer] = None,
         eas_manager: Optional[EASAttestationManager] = None,
         auditor: Optional[Any] = None,
@@ -48,13 +42,11 @@ class TelegramBotService:
         self.allowed_chat_id = allowed_chat_id or os.getenv("TELEGRAM_CHAT_ID")
         self.metabolism = metabolism
         self.daemon = daemon
-        self.scanner = scanner
-        self.solver = solver
-        self.github_solver = github_solver
-        self.static_analyzer = static_analyzer or RealSolidityStaticAnalyzer()
+        self.static_analyzer = static_analyzer
         self.eas_manager = eas_manager
         self.auditor = auditor
-        self.subcontracting_engine = subcontracting_engine
+        self.subcontracting = subcontracting_engine
+        self.updater: Optional[Updater] = None
         
         self._is_running = False
         self._thread: Optional[threading.Thread] = None
@@ -241,8 +233,7 @@ class TelegramBotService:
         elif command == "/scan":
             if not self.scanner:
                 try:
-                    from channels.github_bounty_scanner import GitHubBountyScanner
-                    self.scanner = GitHubBountyScanner()
+                                        self.scanner = GitHubBountyScanner()
                 except Exception:
                     pass
 

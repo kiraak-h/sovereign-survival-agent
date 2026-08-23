@@ -12,10 +12,7 @@ from pydantic import BaseModel, Field
 from core.models import AgentState, Bounty, TaskType, ModelTier
 from core.metabolism import MetabolismManager
 from core.policy_engine import SurvivalPolicyEngine
-from core.self_correcting_solver import SelfCorrectingSolver, ClosedLoopResult
-from core.github_solver import GitHubSolverEngine
 from core.notifier import AgentNotifier
-from channels.github_bounty_scanner import GitHubBountyScanner, ScannedBounty
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from channels.automated_contract_auditor import AutomatedContractAuditor
@@ -42,18 +39,12 @@ class AutonomousDaemon:
         self,
         metabolism: MetabolismManager,
         policy: SurvivalPolicyEngine,
-        scanner: GitHubBountyScanner,
-        solver: SelfCorrectingSolver,
-        github_solver: GitHubSolverEngine,
         notifier: AgentNotifier,
         auditor: Optional[Any] = None,
         interval_seconds: int = 300
     ):
         self.metabolism = metabolism
         self.policy = policy
-        self.scanner = scanner
-        self.solver = solver
-        self.github_solver = github_solver
         self.notifier = notifier
         self.auditor = auditor
         self.interval_seconds = interval_seconds
