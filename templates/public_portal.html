@@ -20,7 +20,7 @@
       <div class="flex items-center gap-4 text-sm font-medium">
         <a href="#github-actions" class="hover:text-emerald-400 transition-colors">GitHub Actions</a>
         <a href="#m2m-sdk" class="hover:text-emerald-400 transition-colors">Python SDK</a>
-        <a href="/docs" class="hover:text-emerald-400 transition-colors">API Docs</a>
+        
         <a href="/admin" class="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-xs text-gray-300">Admin</a>
       </div>
     </div>
@@ -35,22 +35,6 @@
       <p class="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto">
         The only AI oracle on Base L2 that cryptographically audits smart contracts and signs its own EIP-2612 micro-transactions.
       </p>
-    </section>
-
-    <!-- Sandbox -->
-    <section class="glass rounded-2xl p-8 glow">
-      <h2 class="text-2xl font-bold mb-4">Try the Live Sandbox</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-2">Solidity Source Code</label>
-          <textarea id="sandbox-code" rows="10" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-4 font-mono text-sm text-gray-300 focus:outline-none focus:border-emerald-500 transition-colors" placeholder="pragma solidity ^0.8.20;..."></textarea>
-          <button onclick="runAudit()" id="audit-btn" class="mt-4 w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all">Run Security Audit</button>
-        </div>
-        <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 overflow-auto">
-          <div class="text-sm font-medium text-gray-400 mb-2">Audit Results</div>
-          <pre id="audit-result" class="text-xs font-mono text-gray-500 whitespace-pre-wrap">Awaiting input...</pre>
-        </div>
-      </div>
     </section>
 
     <!-- Products -->
@@ -120,40 +104,7 @@
       }
     }
 
-    async function runAudit() {
-      const code = document.getElementById('sandbox-code').value.trim();
-      if(!code) return alert("Enter code");
-      const out = document.getElementById('audit-result');
-      out.innerHTML = "Analyzing AST...";
-      
-      try {
-        const permitRes = await fetch('/v1/mock/create-permit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            payer_private_key: '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join(''),
-            amount_usdc: 0.25
-          })
-        });
-        const permit = await permitRes.json();
-
-        const auditRes = await fetch('/v1/audit/smart-contract', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            code: code,
-            payer_address: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f',
-            payment_permit: permit,
-            target_contract_name: 'Sandbox.sol'
-          })
-        });
-
-        const data = await auditRes.json();
-        out.innerHTML = JSON.stringify(data, null, 2);
-      } catch (e) {
-        out.innerHTML = "Error: " + e.message;
-      }
-    }
+    
   </script>
 </body>
 </html>

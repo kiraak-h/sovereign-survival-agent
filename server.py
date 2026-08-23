@@ -54,7 +54,7 @@ from scripts.broadcast_live_tx import check_status_and_deploy, get_connected_w3,
 
 
 
-app = FastAPI(
+app = FastAPI(docs_url=None, redoc_url=None, 
     title="Sovereign AI Agent API (Base L2)",
     description="Autonomous 'Earn to Survive' Decentralized Agent Gateway with 24/7 Daemon, EAS & GitHub Dispatch",
     version="1.5.0"
@@ -162,7 +162,7 @@ class SolveBountyRequest(BaseModel):
 
 
 @app.get("/v1/agent/vitals", summary="Fetch real-time metabolic vitals")
-def get_agent_vitals():
+def get_agent_vitals(username: str = Depends(get_current_username)):
     """Returns the agent's live treasury, metabolic burn rate, and real Base Sepolia on-chain data."""
     _metabolism.tick_metabolic_cost()
     
@@ -208,20 +208,20 @@ def get_agent_vitals():
 
 
 @app.get("/v1/daemon/status", summary="Get 24/7 Autonomous Daemon status")
-def get_daemon_status():
+def get_daemon_status(username: str = Depends(get_current_username)):
     """Returns background worker state and stats."""
     return _daemon.get_status().model_dump(mode="json")
 
 
 @app.post("/v1/daemon/start", summary="Start 24/7 Autonomous Daemon")
-def start_daemon():
+def start_daemon(username: str = Depends(get_current_username)):
     """Starts the background worker thread."""
     _daemon.start()
     return {"success": True, "status": _daemon.get_status().model_dump(mode="json")}
 
 
 @app.post("/v1/daemon/stop", summary="Stop 24/7 Autonomous Daemon")
-def stop_daemon():
+def stop_daemon(username: str = Depends(get_current_username)):
     """Stops the background worker thread."""
     _daemon.stop()
     return {"success": True, "status": _daemon.get_status().model_dump(mode="json")}
@@ -349,7 +349,7 @@ def get_service_pricing():
 
 
 @app.get("/v1/agent/ledger", summary="Get auditable transaction ledger")
-def get_financial_ledger(limit: int = 20):
+def get_financial_ledger(limit: int = 20, username: str = Depends(get_current_username)):
     """Returns recent financial transactions and compute consumption logs."""
     entries = _metabolism.ledger[-limit:] if _metabolism.ledger else []
     return {
@@ -387,7 +387,7 @@ def receive_bountycaster_webhook(payload: Dict[str, Any]):
 
 @app.post("/v1/broadcast-onchain", summary="Broadcast live transaction to Base Sepolia L2")
 
-def broadcast_onchain():
+def broadcast_onchain(username: str = Depends(get_current_username)):
     """Runs live on-chain status check, gas verification, and transaction broadcast on Base Sepolia."""
     result = check_status_and_deploy()
     return {
