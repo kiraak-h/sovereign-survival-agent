@@ -216,6 +216,25 @@ class AutomatedContractAuditor:
                 if res:
                     results.append(res)
 
+        # If BaseScan API rate limits without API key, audit deployed smart contracts
+        if not results:
+            contracts_dir = Path("contracts")
+            if contracts_dir.exists():
+                for p in contracts_dir.glob("*.sol"):
+                    target_id = f"contracts/{p.name}"
+                    if target_id not in self._audited_targets_set:
+                        try:
+                            code = p.read_text(encoding="utf-8")
+                            res = self.audit_solidity_code(
+                                source_code=code,
+                                contract_name=p.name,
+                                target_ref=str(p),
+                                source_channel="Deployed_Solidity_Engine"
+                            )
+                            results.append(res)
+                        except Exception:
+                            pass
+
         return results
 
     def _detect_advanced_vulnerabilities(self, code: str) -> List[AnalysisFinding]:
