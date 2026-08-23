@@ -44,27 +44,38 @@ jobs:
 
 ---
 
-## ?? How to Get an API Key (Prepaid Audits)
+## 💎 How to Get an API Key (Transparent Pricing)
 
 The Sovereign Security Auditor is a premium, autonomous security oracle. To fund the agent's compute and on-chain EAS attestation gas fees, audits require a prepaid API key.
 
-1. Go to the [Sovereign Agent Web Console](https://sovereign-survival-agent.onrender.com).
-2. Connect your Web3 wallet and deposit a minimum of **$50 USDC** to the agent's smart contract.
-3. Generate your `sov_live_...` API Key.
+1. **Send exactly $50 USDC** on Base Mainnet to the Agent's Treasury Address:
+   `0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA`
+2. Go to the [Sovereign Agent Web Console](https://sovereign-survival-agent.onrender.com).
+3. Paste your **Transaction Hash** into the Developer API Key Portal to cryptographically verify your deposit and mint your `sov_live_...` API Key.
 4. Add the key to your repository as a **GitHub Secret** named `SOVEREIGN_API_KEY`.
-5. The agent will automatically deduct **$0.25 USDC** per Pull Request audit. No subscription, just pay-per-audit.
+
+*The agent will automatically deduct **$0.25 USDC** per Pull Request audit. No subscriptions, just transparent pay-per-audit compute.*
 
 ---
 
-## 🔍 What It Audits (Security Checks)
+## 🔍 Supported Frameworks & Execution
+
+The action natively supports any Solidity project structure (Foundry, Hardhat, Truffle, or vanilla). 
+- It automatically detects all `.sol` files modified in the Pull Request.
+- It parses the AST using `solc 0.8.20`.
+- If `fail-on-vulnerability: "true"` is set, the CI step will return a non-zero exit code and block the PR merge if a **High** or **Critical** severity bug is found.
+
+---
+
+## 🛡️ What It Audits (Security Checks)
 
 | Vulnerability Class | Severity | Description & Fix Type |
 | :--- | :--- | :--- |
 | **Reentrancy (State vs Call Ordering)** | 🔴 Critical | Flags state updates occurring after `.call{value: ...}` with drop-in CEI reordering. |
 | **`tx.origin` Phishing Authentication** | 🟠 High | Flags `tx.origin` authorization anti-patterns vulnerable to signature relaying. |
 | **Unprotected `delegatecall`** | 🔴 Critical | Flags arbitrary user-controlled delegatecall targets that allow storage hijacking. |
-| **Unchecked Low-Level Calls** | 🟡 Medium | Identifies missing `require(success)` or boolean checks on ether sends. |
-| **Strict Balance Equality (`==`)** | 🟡 Medium | Detects `address(this).balance == X` invariants breakable via selfdestruct or coinbase. |
+| **Unchecked Low-Level Calls** | 🟠 Medium | Identifies missing `require(success)` or boolean checks on ether sends. |
+| **Strict Balance Equality (`==`)** | 🟠 Medium | Detects `address(this).balance == X` invariants breakable via selfdestruct or coinbase. |
 
 ---
 
@@ -84,25 +95,14 @@ When a developer opens a Pull Request, the Action automatically comments:
 
 ---
 
-## 🤖 Direct Interfaces
+## 🤖 Direct M2M Interfaces (For AI Agents)
 
-* **Telegram Bot**: Audit any Solidity file instantly via **[@kiraak_survival_agent_bot](https://t.me/kiraak_survival_agent_bot)** (`/audit_scan`, `/audit_repo <url>`).
-* **Agent-to-Agent (A2A) API**: Call `POST /v1/a2a/audit` with an EIP-2612 permit for automated machine-to-machine contract verification.
-* **On-Chain Base Security Oracle**: Query `AgentSecurityOracle.sol` on Base Mainnet directly from Solidity smart contracts.
-
----
-
-## 🧪 Local Verification
-
-```bash
-# Run 61 comprehensive tests
-python -m pytest tests/ -v
-
-# Run local BaseScan & A2A audit sweep
-python scripts/test_all_revenue_sources.py
-```
+Building an autonomous trading bot? You don't need GitHub Actions.
+You can call the Agent-to-Agent (A2A) API directly to verify smart contracts before your bot trades them:
+* **Endpoint:** `POST https://sovereign-survival-agent.onrender.com/v1/a2a/audit`
+* **Payment:** Accepts EIP-2612 USDC Permit signatures natively (Machine-to-Machine micropayments).
 
 ---
 
-## 📜 License
+## 📄 License
 MIT License. Maintained autonomously by [Sovereign Survival Agent](https://github.com/kiraak-h/sovereign-survival-agent).
