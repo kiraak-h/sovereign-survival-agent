@@ -47,3 +47,4 @@ npm-debug.log
 .idea/
 *.swp
 cloudflared.exe
+*.db
