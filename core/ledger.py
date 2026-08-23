@@ -14,15 +14,19 @@ class PrepaidLedger:
                     api_key TEXT PRIMARY KEY,
                     client_name TEXT,
                     balance_usdc REAL,
-                    total_audits INTEGER DEFAULT 0
+                    total_audits INTEGER DEFAULT 0,
+                    tx_hash TEXT UNIQUE NOT NULL
                 )
             ''')
             
-    def generate_key(self, client_name: str, initial_deposit_usdc: float) -> str:
+    def generate_key(self, client_name: str, initial_deposit_usdc: float, tx_hash: str) -> str:
         api_key = f"sov_live_{secrets.token_hex(16)}"
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute('INSERT INTO api_keys (api_key, client_name, balance_usdc) VALUES (?, ?, ?)',
-                         (api_key, client_name, initial_deposit_usdc))
+            try:
+                conn.execute('INSERT INTO api_keys (api_key, client_name, balance_usdc, tx_hash) VALUES (?, ?, ?, ?)',
+                             (api_key, client_name, initial_deposit_usdc, tx_hash))
+            except sqlite3.IntegrityError:
+                raise ValueError("Transaction hash already used or invalid.")
         return api_key
         
     def charge_audit(self, api_key: str, fee_usdc: float) -> tuple[bool, str]:

@@ -497,21 +497,63 @@ def a2a_audit_contract(req: A2AAuditRequest, response: Response):
     """Machine-to-machine smart contract verification for external AI agents."""
     success, res_data, status_code = _a2a_gateway.process_a2a_request(req)
     response.status_code = status_code
-    return res_data
-
+class GenerateKeyRequest(BaseModel):
+    tx_hash: str
 
 @app.post("/v1/keys/generate", summary="Generate Prepaid API Key")
-def generate_api_key():
-    """Mints a new developer API key pre-funded with 50 USDC for CI/CD usage."""
+def generate_api_key(req: GenerateKeyRequest):
+    """Mints a new developer API key by cryptographically verifying a 50 USDC deposit on Base Mainnet."""
+    tx_hash = req.tx_hash
+    from fastapi import HTTPException
+    from scripts.broadcast_live_tx import get_connected_w3
+    
+    # Connect to Base Mainnet
+    w3 = get_connected_w3(is_production=True)
+    
+    try:
+        receipt = w3.eth.get_transaction_receipt(tx_hash)
+        tx = w3.eth.get_transaction(tx_hash)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Transaction not found on Base Mainnet: {str(e)}")
+        
+    if receipt['status'] != 1:
+        raise HTTPException(status_code=400, detail="Transaction failed on-chain.")
+        
+    # Base Mainnet USDC Contract
+    REAL_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    if tx['to'].lower() != REAL_USDC.lower():
+        raise HTTPException(status_code=400, detail="Transaction was not sent to the official Base USDC contract.")
+        
+    input_data = tx['input']
+    if type(input_data) == bytes:
+        input_data = input_data.hex()
+    if input_data.startswith("0x"):
+        input_data = input_data[2:]
+        
+    if not input_data.startswith("a9059cbb"):
+        raise HTTPException(status_code=400, detail="Transaction is not an ERC-20 transfer.")
+        
+    # Decode recipient and amount (a9059cbb is 8 chars, then 64 chars address, 64 chars amount)
+    recipient = "0x" + input_data[8:72][-40:]
+    amount = int(input_data[72:], 16)
+    
+    agent_address = _agent_state.agent_address
+    if recipient.lower() != agent_address.lower():
+        raise HTTPException(status_code=400, detail=f"USDC was not sent to the agent's treasury address: {agent_address}")
+        
+    if amount < 50_000_000:
+        raise HTTPException(status_code=400, detail="Amount must be exactly 50 USDC (50000000 mUSDC).")
+        
     from core.ledger import PrepaidLedger
     ledger = PrepaidLedger()
-    # In a real production app, this would verify a stripe/web3 transaction hash first
-    api_key = ledger.generate_key(client_name="WebConsole_User", initial_deposit_usdc=50.0)
-    
-    # Credit the metabolism for the deposit
+    try:
+        api_key = ledger.generate_key(client_name="Web_Checkout", initial_deposit_usdc=50.0, tx_hash=tx_hash)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
     _metabolism.credit_revenue(
         amount_usdc=50.0,
-        source_description="API Key Deposit: $50 USDC (Prepaid CI/CD Audits)"
+        source_description=f"API Key Deposit: $50 USDC via tx {tx_hash[:10]}"
     )
     
     return {"api_key": api_key, "balance_usdc": 50.0, "status": "success"}
@@ -663,15 +705,20 @@ def serve_console():
             🔑 Developer API Key Portal
           </h2>
           <p class="text-xs text-slate-400 mt-0.5">
-            Purchase a prepaid API key to authenticate GitHub Actions CI/CD workflows against the A2A Security Oracle.
+            Send exactly <strong>50 USDC</strong> on Base Mainnet to <code class="text-emerald-400 select-all font-bold">0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA</code>. 
+            <br/>Paste the transaction hash below to cryptographically verify your deposit and mint your API key.
           </p>
         </div>
-        <button onclick="generateApiKey()" id="gen-key-btn" class="px-4 py-2 text-xs rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-bold transition-all shadow-lg">
-          Deposit $50 USDC & Generate Key
+      </div>
+      
+      <div class="flex gap-2">
+        <input type="text" id="tx-hash-input" placeholder="0x..." class="flex-1 font-mono text-xs p-3 rounded-xl bg-[#07080D] border border-slate-800 text-slate-200 focus:outline-none focus:border-emerald-500" />
+        <button onclick="generateApiKey()" id="gen-key-btn" class="px-6 py-2 text-xs rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-bold transition-all shadow-lg whitespace-nowrap cursor-pointer">
+          Verify Tx & Mint Key
         </button>
       </div>
 
-      <div id="api-key-result" class="hidden mt-4 p-4 rounded-xl border border-emerald-800/50 bg-emerald-950/20 text-xs font-mono space-y-3">
+      <div id="api-key-result" class="hidden p-4 rounded-xl border border-emerald-800/50 bg-emerald-950/20 text-xs font-mono space-y-3">
          <!-- Key goes here -->
       </div>
     </div>
@@ -828,19 +875,36 @@ def serve_console():
     async function generateApiKey() {
       const btn = document.getElementById('gen-key-btn');
       const resBox = document.getElementById('api-key-result');
+      const txInput = document.getElementById('tx-hash-input').value.trim();
       
-      btn.innerText = "Depositing USDC...";
+      if (!txInput.startsWith('0x') || txInput.length !== 66) {
+        resBox.classList.remove('hidden');
+        resBox.innerHTML = `<span class="text-red-400">Invalid transaction hash format. Must be a 66-character hex string starting with 0x.</span>`;
+        return;
+      }
+      
+      btn.innerText = "Verifying On-Chain...";
       btn.disabled = true;
       resBox.classList.remove('hidden');
-      resBox.innerHTML = '<span class="text-cyan-400 animate-pulse">Waiting for Web3 Signature & Deposit...</span>';
+      resBox.innerHTML = '<span class="text-cyan-400 animate-pulse">Querying Base Mainnet via RPC...</span>';
       
       try {
-        const res = await fetch('/v1/keys/generate', { method: 'POST' });
-        if (!res.ok) throw new Error("Failed to generate API key");
+        const res = await fetch('/v1/keys/generate', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tx_hash: txInput })
+        });
+        
+        if (!res.ok) {
+            const errText = await res.text();
+            let errMsg = "Failed to verify transaction";
+            try { errMsg = JSON.parse(errText).detail; } catch (e) {}
+            throw new Error(errMsg);
+        }
         
         const data = await res.json();
         resBox.innerHTML = `
-          <div class="text-emerald-400 font-bold mb-2">✅ Success! $50 USDC Deposited.</div>
+          <div class="text-emerald-400 font-bold mb-2">✅ Success! 50 USDC deposit cryptographically verified.</div>
           <div class="text-slate-300">Your Developer API Key:</div>
           <div class="p-3 bg-[#07080D] border border-emerald-900/50 rounded mt-2 select-all font-bold text-white text-sm">
             ${data.api_key}
@@ -848,9 +912,9 @@ def serve_console():
           <div class="text-slate-500 mt-2">Store this key in your GitHub Repository Secrets as <code>SOVEREIGN_API_KEY</code>.</div>
         `;
       } catch (e) {
-        resBox.innerHTML = `<span class="text-red-400">Transaction failed: ${e.message}</span>`;
+        resBox.innerHTML = `<span class="text-red-400">Verification failed: ${e.message}</span>`;
       } finally {
-        btn.innerText = "Deposit $50 USDC & Generate Key";
+        btn.innerText = "Verify Tx & Mint Key";
         btn.disabled = false;
       }
     }
