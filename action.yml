@@ -1,0 +1,52 @@
+name: "Sovereign AI Smart Contract Security Audit"
+description: "Autonomous static AST and solc security auditor for Solidity smart contracts with EAS on-chain attestations on Base L2."
+author: "Sovereign Survival Agent"
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  github-token:
+    description: "GitHub Token for posting PR review comments"
+    required: true
+    default: "${{ github.token }}"
+  agent-api-url:
+    description: "Base URL of the Sovereign Agent Audit API"
+    required: false
+    default: "https://sovereign-survival-agent.onrender.com"
+  fail-on-vulnerability:
+    description: "Whether to fail CI step if Critical or High severity vulnerability is detected"
+    required: false
+    default: "false"
+
+outputs:
+  security-score:
+    description: "Overall security score out of 100"
+  findings-count:
+    description: "Total number of security findings detected"
+  eas-attestation-url:
+    description: "Link to cryptographic on-chain EAS attestation on BaseScan / EAS Scan"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pydantic py-solc-x
+
+    - name: Run Sovereign Contract Security Audit
+      id: audit-step
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        AGENT_API_URL: ${{ inputs.agent-api-url }}
+        FAIL_ON_VULNERABILITY: ${{ inputs.fail-on-vulnerability }}
+      run: |
+        python action/ci_runner.py

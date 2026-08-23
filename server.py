@@ -83,6 +83,7 @@ _bounty_scanner = GitHubBountyScanner()
 _llm_gateway = LLMGateway(metabolism=_metabolism)
 
 from channels.automated_contract_auditor import AutomatedContractAuditor
+from channels.a2a_gateway import A2AGateway, A2AAuditRequest
 
 _self_correcting_solver = SelfCorrectingSolver(agent_address=_agent_state.agent_address, llm_gateway=_llm_gateway)
 _github_solver = GitHubSolverEngine(agent_address=_agent_state.agent_address)
@@ -95,6 +96,12 @@ _auditor = AutomatedContractAuditor(
     eas_manager=_eas_manager,
     notifier=_notifier
 )
+_a2a_gateway = A2AGateway(
+    auditor=_auditor,
+    metabolism=_metabolism,
+    wallet=_wallet
+)
+
 
 _daemon = AutonomousDaemon(
     metabolism=_metabolism,
@@ -502,6 +509,40 @@ def direct_contract_audit(req: DirectAuditRequest):
         source_channel="REST_Direct"
     )
     return res.model_dump(mode="json")
+
+
+@app.post("/v1/a2a/audit", summary="Agent-to-Agent (A2A) HTTP-402 Verification Endpoint")
+def a2a_audit_contract(req: A2AAuditRequest, response: Response):
+    """Machine-to-machine smart contract verification for external AI agents."""
+    success, res_data, status_code = _a2a_gateway.process_a2a_request(req)
+    response.status_code = status_code
+    return res_data
+
+
+@app.post("/v1/ci/audit-pr", summary="GitHub CI/CD Action Smart Contract Security Audit")
+def ci_audit_pr(req: DirectAuditRequest):
+    """Processes smart contract security audits triggered from GitHub Action workflows."""
+    res = _auditor.audit_solidity_code(
+        source_code=req.code,
+        contract_name=req.contract_name,
+        target_ref=req.target_ref,
+        source_channel="GitHub_CI_Action"
+    )
+    return res.model_dump(mode="json")
+
+
+@app.get("/v1/oracle/metadata", summary="Get on-chain Base Security Oracle metadata")
+def get_oracle_metadata():
+    """Returns the contract address, ABI, and query fee for AgentSecurityOracle on Base."""
+    return {
+        "oracle_contract": "0x9c59FdB0153325af6d28164832C224C1DE12e4A5",
+        "treasury": _agent_state.agent_address,
+        "query_fee_wei": "100000000000000",
+        "query_fee_eth": 0.0001,
+        "network": "Base Mainnet L2 (Chain ID 8453)",
+        "protocol": "AgentSecurityOracle (EAS Attested)"
+    }
+
 
 
 
