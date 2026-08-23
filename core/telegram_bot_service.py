@@ -77,6 +77,7 @@ class TelegramBotService:
             commands = [
                 {"command": "wallet", "description": "Generate or view your trading wallet"},
                 {"command": "buy", "description": "Securely snipe a token (/buy address amount)"},
+                {"command": "refer", "description": "Get your referral link and view earnings"},
                 {"command": "status", "description": "View live agent revenue metrics"},
                 {"command": "sweep", "description": "Force on-chain settlement"},
                 {"command": "help", "description": "Show help and command guide"}
@@ -136,11 +137,37 @@ class TelegramBotService:
     def handle_command(self, cmd_text: str, chat_id: str):
         is_admin = (str(chat_id) == str(self.allowed_chat_id))
         
-        if cmd_text == "/start" or cmd_text == "/help":
+        if cmd_text.startswith("/start"):
+            referrer_id = None
+            if " ref_" in cmd_text:
+                referrer_id = cmd_text.split(" ref_")[-1]
+            try:
+                from core.sniper_wallet import get_or_create_wallet
+                get_or_create_wallet(chat_id, referrer_id)
+            except Exception:
+                pass
+            
             msg = (
                 "🛡️ *Sovereign Sniper Bot*\n\n"
                 "/wallet - Generate or view your trading wallet\n"
                 "/buy [token] [amount] - Securely snipe a token\n"
+                "/refer - Earn 20% of trading fees\n"
+            )
+            if is_admin:
+                msg += (
+                    "\n👑 *Admin Commands*\n"
+                    "/status - View live agent metrics\n"
+                    "/sweep - Force on-chain settlement\n"
+                )
+            msg += "\nPaste a Solidity contract for an instant AST audit."
+            self.send_message(msg, chat_id)
+            
+        elif cmd_text == "/help":
+            msg = (
+                "🛡️ *Sovereign Sniper Bot*\n\n"
+                "/wallet - Generate or view your trading wallet\n"
+                "/buy [token] [amount] - Securely snipe a token\n"
+                "/refer - Earn 20% of trading fees\n"
             )
             if is_admin:
                 msg += (
@@ -167,8 +194,30 @@ class TelegramBotService:
         elif cmd_text.startswith("/buy"):
             self._handle_buy(cmd_text, chat_id)
             
+        elif cmd_text == "/refer":
+            self._handle_refer(chat_id)
+            
         else:
             self.send_message("Unknown command. Try /help", chat_id)
+
+    def _handle_refer(self, chat_id: str):
+        try:
+            from core.sniper_wallet import get_or_create_wallet, get_referral_stats
+            get_or_create_wallet(chat_id)
+            stats = get_referral_stats(chat_id)
+            bot_username = "SovereignSniperBot"
+            link = f"https://t.me/{bot_username}?start=ref_{chat_id}"
+            
+            msg = (
+                f"🤝 *Sovereign Referral Engine*\n\n"
+                f"Invite traders and automatically earn *20%* of their trading fees forever. Rewards are instantly routed to your Sniper Wallet.\n\n"
+                f"🔗 *Your Invite Link:*\n`{link}`\n\n"
+                f"👥 *Total Referrals:* {stats['count']}\n"
+                f"💰 *Total Earned:* {stats['rewards']:.5f} ETH"
+            )
+            self.send_message(msg, chat_id)
+        except Exception as e:
+            self.send_message(f"Error: {e}", chat_id)
 
     def _handle_wallet(self, chat_id: str):
         try:
@@ -201,17 +250,30 @@ class TelegramBotService:
         self.send_message("✅ *AST Clear. Zero mints detected. Routing trade...*", chat_id)
         
         try:
-            from core.sniper_wallet import get_or_create_wallet
+            from core.sniper_wallet import get_wallet_by_chat_id, add_referral_reward
             from core.dex_router import execute_snipe
-            wallet = get_or_create_wallet(chat_id)
-            result = execute_snipe(wallet['private_key'], token, amount)
+            wallet = get_wallet_by_chat_id(chat_id)
+            if not wallet:
+                return self.send_message("Please generate a wallet first via /wallet", chat_id)
+                
+            referrer = wallet.get('referrer_id')
+            # Assuming we can grab the private key too, but get_wallet_by_chat_id doesn't return pk right now.
+            # Wait, I need the private key!
+            from core.sniper_wallet import get_or_create_wallet
+            full_wallet = get_or_create_wallet(chat_id)
+            
+            result = execute_snipe(full_wallet['private_key'], token, amount, referrer)
             
             if result['status'] == 'SUCCESS':
+                if referrer and result.get('referrer_reward_eth'):
+                    add_referral_reward(referrer, result['referrer_reward_eth'])
+                    self.send_message(f"🎉 One of your referrals just traded! You earned {result['referrer_reward_eth']:.5f} ETH.", referrer)
+                    
                 msg = (
                     f"🎯 *Snipe Executed!*\n\n"
                     f"Token: `{token}`\n"
-                    f"Amount: {result['trade_eth']} ETH\n"
-                    f"Fee (1%): {result['fee_eth']} ETH\n\n"
+                    f"Amount: {result['trade_eth']:.4f} ETH\n"
+                    f"Total Fee (1%): {result['total_fee_eth']:.5f} ETH\n\n"
                     f"Tx Hash: [{result['simulated_tx_hash']}](https://basescan.org/tx/{result['simulated_tx_hash']})"
                 )
                 self.send_message(msg, chat_id)
