@@ -75,17 +75,10 @@ class TelegramBotService:
         try:
             url = f"https://api.telegram.org/bot{self.token}/setMyCommands"
             commands = [
-                {"command": "vitals", "description": "View treasury, ETH gas, runway & BaseScan"},
-                {"command": "scan", "description": "Scan live $50-$250 GitHub/Algora bounties"},
-                {"command": "solve", "description": "Solve a GitHub issue (/solve url)"},
-                {"command": "delegate", "description": "Delegate a bounty to peer subagent swarm (/delegate url)"},
-                {"command": "swarm_status", "description": "View active peer subagents and reputations"},
-                {"command": "audit_scan", "description": "Auto-audit verified BaseScan contracts"},
-                {"command": "audit_repo", "description": "Audit all .sol files in a GitHub repo (/audit_repo url)"},
-                {"command": "tick", "description": "Force immediate scan & solve cycle"},
-                {"command": "digest", "description": "Performance & profit summary"},
-                {"command": "daemon", "description": "Control 24/7 autopilot (/daemon start or stop)"},
-                {"command": "status", "description": "View worker daemon status"},
+                {"command": "wallet", "description": "Generate or view your trading wallet"},
+                {"command": "buy", "description": "Securely snipe a token (/buy address amount)"},
+                {"command": "status", "description": "View live agent revenue metrics"},
+                {"command": "sweep", "description": "Force on-chain settlement"},
                 {"command": "help", "description": "Show help and command guide"}
             ]
             requests.post(url, json={"commands": commands}, timeout=8.0)
@@ -389,7 +382,7 @@ class TelegramBotService:
         """Processes voice note audio files."""
         self.send_message("🎙️ Voice note received! Interpreting audio instruction...", chat_id)
         # Default voice instruction interpretation
-        self.handle_command("/vitals", chat_id)
+        self.handle_command("/help", chat_id)
 
     def _poll_loop(self):
         """Long-polling update loop for Telegram Bot API."""
