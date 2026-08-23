@@ -1,0 +1,11 @@
+{
+  "network": "BASE_MAINNET",
+  "chain_id": 8453,
+  "contract_address": "0x40521ddd9aD0F405276299C05eaa7A38b357b33d",
+  "deployer": "0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA",
+  "treasury": "0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA",
+  "operator": "0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA",
+  "query_fee_eth": "0.0001",
+  "tx_hash": "e07f6ec35d746f8f2e93a708649841cb92ea9dd5c75efcbc08db0b135befcc76",
+  "block_number": 50340859
+}
