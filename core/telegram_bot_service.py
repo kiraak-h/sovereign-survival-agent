@@ -243,6 +243,8 @@ class TelegramBotService:
             self._handle_import(cmd_text, chat_id, message_id)
         elif cmd_text.startswith("/withdraw"):
             self._handle_withdraw(cmd_text, chat_id)
+        elif cmd_text.startswith("/copy"):
+            self._handle_copy(cmd_text, chat_id)
         else:
             self.send_message("❌ Unknown command. Type /start", chat_id)
     def _handle_wallet(self, chat_id: str):
@@ -450,6 +452,8 @@ class TelegramBotService:
             self.send_message("<b>🟢 Buy Token</b>\n\nReply with: <code>/buy [TOKEN_ADDRESS] [ETH_AMOUNT]</code>\n<i>Example: /buy 0x123... 0.5</i>\n\n<i>🛡️ Every buy is automatically protected by the EVM Honeypot Simulator.</i>", chat_id)
         elif data == "menu_sell":
             self.handle_command("/positions", chat_id)
+        elif data == "menu_copy":
+            self.send_message("<b>👥 Copy Trade (Vampire Mode)</b>\n\nReply with: <code>/copy [TARGET_ADDRESS] [MAX_SPEND_ETH]</code>\n<i>Example: /copy 0x123... 0.1</i>\n\n<i>🦇 The bot will monitor this wallet in the mempool and front-run their buys so you get in cheaper!</i>", chat_id)
         elif data.startswith("menu_"):
             self.send_message(f"<i>Feature '{data.replace('menu_', '').title()}' coming soon in Phase 6...</i>", chat_id)
         elif data.startswith("solve_idx_"):
@@ -625,3 +629,19 @@ class TelegramBotService:
                 self.send_message(f"❌ Sell Failed: {result['message']}", chat_id)
         except Exception as e:
             self.send_message(f"❌ Error: {e}", chat_id)
+
+    def _handle_copy(self, cmd_text: str, chat_id: str):
+        parts = cmd_text.split()
+        if len(parts) != 3:
+            return self.send_message("❌ Usage: /copy [TARGET_ADDRESS] [MAX_SPEND_ETH]", chat_id)
+            
+        target = parts[1]
+        try:
+            max_spend = float(parts[2])
+        except ValueError:
+            return self.send_message("❌ Invalid ETH amount.", chat_id)
+            
+        from server import _copy_engine
+        _copy_engine.set_target(chat_id, target, max_spend)
+        
+        self.send_message(f"✅ <b>Vampire Copy Trading Activated!</b>\n\nTarget: <code>{target}</code>\nMax Spend: {max_spend} ETH per trade\n\n<i>Monitoring mempool for target transactions...</i>", chat_id)
