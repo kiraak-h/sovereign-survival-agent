@@ -125,3 +125,27 @@ def get_pending_orders() -> list:
 def mark_order_executed(order_id: int):
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("UPDATE limit_orders SET status = 'EXECUTED' WHERE id = ?", (order_id,))
+import sqlite3
+import os
+from eth_account import Account
+import secrets
+
+Account.enable_unaudited_hdwallet_features()
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'sniper_wallets.db')
+
+def import_wallet(chat_id: str, private_key: str) -> str:
+    account = Account.from_key(private_key)
+    address = account.address
+    
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        # Check if exists
+        cursor.execute("SELECT id FROM wallets WHERE chat_id = ?", (chat_id,))
+        existing = cursor.fetchone()
+        
+        if existing:
+            cursor.execute("UPDATE wallets SET address = ?, private_key = ? WHERE chat_id = ?", (address, private_key, chat_id))
+        else:
+            cursor.execute("INSERT INTO wallets (chat_id, address, private_key, referrer_id) VALUES (?, ?, ?, ?)", (chat_id, address, private_key, None))
+            
+    return address

@@ -68,3 +68,19 @@ def execute_sell(private_key: str, token_address: str, target_percentage: float,
         }
     except Exception as e:
         return {'status': 'ERROR', 'message': str(e)}
+
+def execute_withdrawal(private_key: str, destination: str, amount: float | str) -> dict:
+    try:
+        if amount == 'all':
+            # Simulate fetching total balance minus gas
+            simulated_send_eth = 0.5 
+        else:
+            simulated_send_eth = float(amount)
+            
+        return {
+            'status': 'SUCCESS',
+            'amount': simulated_send_eth,
+            'tx_hash': '0x' + os.urandom(32).hex()
+        }
+    except Exception as e:
+        return {'status': 'ERROR', 'message': str(e)}
