@@ -58,6 +58,7 @@ def get_or_create_wallet(chat_id: str, referrer_id: Optional[str] = None) -> dic
         }
 
 def get_wallet_by_chat_id(chat_id: str) -> Optional[dict]:
+    init_db()
     with sqlite3.connect("sniper_wallets.db") as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -72,10 +73,12 @@ def get_wallet_by_chat_id(chat_id: str) -> Optional[dict]:
     return None
 
 def add_referral_reward(chat_id: str, amount_eth: float):
+    init_db()
     with sqlite3.connect("sniper_wallets.db") as conn:
         conn.execute("UPDATE users SET referral_rewards_eth = referral_rewards_eth + ? WHERE chat_id = ?", (amount_eth, chat_id))
 
 def get_referral_stats(chat_id: str) -> dict:
+    init_db()
     with sqlite3.connect("sniper_wallets.db") as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM users WHERE referrer_id = ?", (chat_id,))
