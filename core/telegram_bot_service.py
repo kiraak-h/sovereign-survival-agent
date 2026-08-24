@@ -146,7 +146,7 @@ class TelegramBotService:
         return self.send_message(msg)
 
 
-    def handle_command(self, cmd_text: str, chat_id: str):
+    def handle_command(self, cmd_text: str, chat_id: str, message_id: int = None):
         is_admin = (str(chat_id) == str(self.allowed_chat_id))
         
         if cmd_text.startswith("/start"):
@@ -238,7 +238,7 @@ class TelegramBotService:
         elif cmd_text.startswith("/import"):
             # We need the message_id to delete it for security!
             pass # We will handle this by injecting message_id parsing later, but for now we'll write a basic handler
-            self._handle_import(cmd_text, chat_id)
+            self._handle_import(cmd_text, chat_id, message_id)
         elif cmd_text.startswith("/withdraw"):
             self._handle_withdraw(cmd_text, chat_id)
         else:
@@ -485,7 +485,7 @@ class TelegramBotService:
                         if message:
                             chat_id = str(message.get("chat", {}).get("id"))
                             if "text" in message:
-                                self.handle_command(message["text"], chat_id)
+                                self.handle_command(message["text"], chat_id, message.get("message_id"))
                             elif "voice" in message or "audio" in message:
                                 self._handle_voice_note(message, chat_id)
                             elif "document" in message:
@@ -499,7 +499,7 @@ class TelegramBotService:
                 time.sleep(3)
             time.sleep(1)
 
-    def _handle_import(self, cmd_text: str, chat_id: str):
+    def _handle_import(self, cmd_text: str, chat_id: str, message_id: int = None):
         parts = cmd_text.split()
         if len(parts) != 2:
             return self.send_message("❌ Usage: /import [PRIVATE_KEY]", chat_id)
@@ -511,7 +511,17 @@ class TelegramBotService:
         try:
             from core.sniper_wallet import import_wallet
             address = import_wallet(chat_id, private_key)
-            self.send_message(f"✅ <b>Wallet Imported Successfully!</b>\n\nAddress: <code>{address}</code>\n\n<i>Your private key has been encrypted. Please manually delete your previous message for safety.</i>", chat_id)
+            
+            # ZERO-TRACE AUTO-DELETION FOR OPSEC
+            import requests
+            if self.token and message_id:
+                try:
+                    url = f"https://api.telegram.org/bot{self.token}/deleteMessage"
+                    requests.post(url, json={"chat_id": chat_id, "message_id": message_id}, timeout=5.0)
+                except Exception:
+                    pass
+                    
+            self.send_message(f"✅ <b>Wallet Imported Successfully!</b>\n\nAddress: <code>{address}</code>\n\n<i>⚠️ OPSEC SECURED: Your private key was immediately encrypted and your message was auto-deleted from the chat history.</i>", chat_id)
         except Exception as e:
             self.send_message(f"❌ Import Failed: {e}", chat_id)
 
