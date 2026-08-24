@@ -145,91 +145,111 @@ class TelegramBotService:
         msg += "\n<i>Funds deposited to your Base L2 address.</i>"
         return self.send_message(msg)
 
+
     def handle_command(self, cmd_text: str, chat_id: str):
         is_admin = (str(chat_id) == str(self.allowed_chat_id))
         
         if cmd_text.startswith("/start"):
-            referrer_id = None
-            if " ref_" in cmd_text:
-                referrer_id = cmd_text.split(" ref_")[-1]
-            try:
-                from core.sniper_wallet import get_or_create_wallet
-                get_or_create_wallet(chat_id, referrer_id)
-            except Exception:
-                pass
+        referrer_id = None
+        if " ref_" in cmd_text:
+            referrer_id = cmd_text.split(" ref_")[-1]
+        try:
+            from core.sniper_wallet import get_or_create_wallet
+            wallet = get_or_create_wallet(chat_id, referrer_id)
+            address = wallet["address"]
+        except Exception:
+            address = "0xERROR"
             
-            msg = (
-                "🛡️ *Sovereign Sniper Bot*\n\n"
-                "/wallet - Generate or view your trading wallet\n"
-                "/buy [token] [amount] - Securely snipe a token\n"
-                "/pnl [token] [percentage] - Generate a profit card\n"
-                "/refer - Earn 20% of trading fees\n"
-            )
-            if is_admin:
-                msg += (
-                    "\n👑 *Admin Commands*\n"
-                    "/status - View live agent metrics\n"
-                    "/sweep - Force on-chain settlement\n"
-                )
-            msg += "\nPaste a Solidity contract for an instant AST audit."
-            self.send_message(msg, chat_id)
-            
+        msg = (
+            f"<b>Sovereign Sniper · Base L2</b> 🛡️
+"
+            f"<code>{address}</code> <i>(Tap to copy)</i>
+"
+            f"<b>Balance:</b> 0.000 ETH (.00)
+"
+            f"—
+"
+            f"Click on the Refresh button to update your current balance.
+
+"
+            f"<b>Referral Link</b> | <a href='https://twitter.com/TheSovSniper'>X</a> | Terminal
+"
+            f"<code>https://t.me/SovereignSniperBot?start=ref_{chat_id}</code>"
+        )
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "🟢 Buy", "callback_data": "menu_buy"}, {"text": "🔴 Sell", "callback_data": "menu_sell"}],
+                [{"text": "📊 Positions", "callback_data": "menu_positions"}, {"text": "🎯 Limit Orders", "callback_data": "menu_limits"}, {"text": "🕒 DCA Orders", "callback_data": "menu_dca"}],
+                [{"text": "👥 Copy Trade", "callback_data": "menu_copy"}, {"text": "⚡ Sniper", "callback_data": "menu_snipe"}],
+                [{"text": "🔍 Scanner", "callback_data": "menu_scanner"}, {"text": "💰 Rewards", "callback_data": "menu_rewards"}, {"text": "⭐ Watchlist", "callback_data": "menu_watchlist"}],
+                [{"text": "📤 Withdraw", "callback_data": "menu_withdraw"}, {"text": "📥 Import Wallet", "callback_data": "menu_import"}, {"text": "⚙️ Settings", "callback_data": "menu_settings"}],
+                [{"text": "🕳️ Trenches", "callback_data": "menu_trenches"}, {"text": "❓ Help", "callback_data": "menu_help"}, {"text": "🔄 Refresh", "callback_data": "menu_refresh"}]
+            ]
+        }
+        self.send_message(msg, chat_id, reply_markup=keyboard)
+        
+    elif cmd_text.startswith("/takeprofit"):
+            parts = cmd_text.split()
+            if len(parts) == 3:
+                token = parts[1]
+                try:
+                    target_pct = float(parts[2].replace("%", ""))
+                    from core.sniper_wallet import create_limit_order
+                    create_limit_order(chat_id, token, target_pct)
+                    self.send_message(f"✅ <b>Limit Order Set</b>
+Target: +{target_pct}%
+Token: <code>{token}</code>
+
+<i>The Sovereign Limit Engine is now monitoring this asset.</i>", chat_id)
+                except ValueError:
+                    self.send_message("❌ Invalid percentage. Usage: /takeprofit [token] 50", chat_id)
+            else:
+                self.send_message("❌ Usage: /takeprofit [token] [percentage]", chat_id)
+                
         elif cmd_text == "/help":
             msg = (
-                "🛡️ *Sovereign Sniper Bot*\n\n"
-                "/wallet - Generate or view your trading wallet\n"
-                "/buy [token] [amount] - Securely snipe a token\n"
-                "/pnl [token] [percentage] - Generate a profit card\n"
-                "/refer - Earn 20% of trading fees\n"
-            )
-            if is_admin:
-                msg += (
-                    "\n👑 *Admin Commands*\n"
-                    "/status - View live agent metrics\n"
-                    "/sweep - Force on-chain settlement\n"
-                )
-            msg += "\nPaste a Solidity contract for an instant AST audit."
-            self.send_message(msg, chat_id)
-            
-        elif cmd_text == "/status":
-            if not is_admin:
-                return self.send_message("❌ Unauthorized.", chat_id)
-            self._handle_status(chat_id)
-            
-        elif cmd_text == "/sweep":
-            if not is_admin:
-                return self.send_message("❌ Unauthorized.", chat_id)
-            self._execute_sweep(chat_id)
-            
-        elif cmd_text == "/wallet":
-            self._handle_wallet(chat_id)
-            
-        elif cmd_text.startswith("/buy"):
-            self._handle_buy(cmd_text, chat_id)
-            
-        elif cmd_text.startswith("/pnl"):
-            self._handle_pnl(cmd_text, chat_id)
-            
-        elif cmd_text == "/refer":
-            self._handle_refer(chat_id)
-            
-        else:
-            self.send_message("Unknown command. Try /help", chat_id)
+                "<b><u>How do I use Sovereign Sniper?</u></b>
+"
+                "Check out our <a href='https://youtube.com'>YouTube playlist</a> where we explain it all and join our support chat for additional resources @SovereignSniper.
 
-    def _handle_refer(self, chat_id: str):
-        try:
-            from core.sniper_wallet import get_or_create_wallet, get_referral_stats
-            get_or_create_wallet(chat_id)
-            stats = get_referral_stats(chat_id)
-            bot_username = "SovereignSniperBot"
-            link = f"https://t.me/{bot_username}?start=ref_{chat_id}"
-            
-            msg = (
-                f"🤝 *Sovereign Referral Engine*\n\n"
-                f"Invite traders and automatically earn *20%* of their trading fees forever. Rewards are instantly routed to your Sniper Wallet.\n\n"
-                f"🔗 *Your Invite Link:*\n`{link}`\n\n"
-                f"👥 *Total Referrals:* {stats['count']}\n"
-                f"💰 *Total Earned:* {stats['rewards']:.5f} ETH"
+"
+                "<b><u>Where can I find my referral code?</u></b>
+"
+                "Open the /start menu and click 💰 Rewards.
+
+"
+                "<b><u>What are the fees for using Sovereign?</u></b>
+"
+                "Successful transactions through Sovereign incur a fee of 1.0%, if you were referred by another user (who gets 20% of that). We don't charge a subscription fee or pay-wall any features.
+
+"
+                "<b><u>Security Tips: How can I protect my account from scammers?</u></b>
+"
+                "- Safeguard does <b>NOT</b> require you to login with a phone number or QR code!
+"
+                "- NEVER search for bots in telegram. Use only official links.
+"
+                "- Admins and Mods NEVER dm first or send links, stay safe!
+
+"
+                "<b><u>Trading Tips: Common Failure Reasons</u></b>
+"
+                "- Slippage Exceeded: Up your slippage or sell in smaller increments.
+"
+                "- Insufficient balance for buy amount + gas: Add ETH or reduce your tx amount.
+"
+                "- Timed out: Can occur with heavy network loads, consider increasing your gas tip.
+
+"
+                "<b><u>My PNL seems wrong, why is that?</u></b>
+"
+                "The net profit of a trade takes into consideration the trade's transaction fees. Confirm your gas tip settings and ensure your settings align with your trading size.
+
+"
+                "<b><u>Additional questions or need support?</u></b>
+"
+                "Join our Telegram group @SovereignSniper and one of our admins can assist you."
             )
             self.send_message(msg, chat_id)
         except Exception as e:
@@ -494,7 +514,17 @@ class TelegramBotService:
             except Exception:
                 pass
 
-        if data.startswith("solve_idx_"):
+        if data == "menu_help":
+            self.handle_command("/help", chat_id)
+        elif data == "menu_back":
+            self.handle_command("/start", chat_id)
+        elif data == "menu_refresh":
+            self.handle_command("/start", chat_id)
+        elif data == "menu_limits":
+            self.send_message("<b>🎯 Limit Orders</b>\n\nReply with: <code>/takeprofit [TOKEN] [PERCENTAGE]</code>\n<i>Example: /takeprofit PEPE 50</i>", chat_id)
+        elif data.startswith("menu_"):
+            self.send_message(f"<i>Feature '{data.replace('menu_', '').title()}' coming soon in Phase 6...</i>", chat_id)
+        elif data.startswith("solve_idx_"):
             try:
                 idx = int(data.split("_")[-1])
                 target_item = next((b for b in self._cached_bounties if b["index"] == idx), None)

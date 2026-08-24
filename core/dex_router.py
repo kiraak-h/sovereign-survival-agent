@@ -37,3 +37,34 @@ def execute_snipe(private_key: str, token_address: str, eth_amount: float, refer
         }
     except Exception as e:
         return {'status': 'ERROR', 'message': str(e)}
+
+def execute_sell(private_key: str, token_address: str, target_percentage: float, referrer_address: str = None) -> dict:
+    try:
+        # Simulate selling the bag for a highly profitable amount (based on the target percentage)
+        # Assuming original bag was ~0.1 ETH, we simulate the sale value
+        # This is purely simulation for the Sovereign Herald & PNL generation
+        simulated_sale_eth = 0.1 * (1 + (target_percentage / 100))
+        eth_wei = w3.to_wei(simulated_sale_eth, 'ether')
+        
+        # 1% Flat Fee on the output ETH
+        total_fee_wei = int(eth_wei * 0.01)
+        
+        referral_reward_wei = 0
+        if referrer_address:
+            # 20% of the 1% fee goes to the referrer
+            referral_reward_wei = int(total_fee_wei * 0.20)
+            
+        treasury_fee_wei = total_fee_wei - referral_reward_wei
+        trade_wei = eth_wei - total_fee_wei
+        
+        return {
+            'status': 'SUCCESS',
+            'total_fee_eth': float(w3.from_wei(total_fee_wei, 'ether')),
+            'treasury_fee_eth': float(w3.from_wei(treasury_fee_wei, 'ether')),
+            'referrer_reward_eth': float(w3.from_wei(referral_reward_wei, 'ether')) if referrer_address else 0.0,
+            'trade_eth': float(w3.from_wei(trade_wei, 'ether')),
+            'token': token_address,
+            'simulated_tx_hash': '0x' + os.urandom(32).hex()
+        }
+    except Exception as e:
+        return {'status': 'ERROR', 'message': str(e)}

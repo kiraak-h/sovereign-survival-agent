@@ -87,3 +87,41 @@ def get_referral_stats(chat_id: str) -> dict:
         row = cursor.fetchone()
         rewards = row[0] if row else 0.0
         return {"count": count, "rewards": rewards}
+import sqlite3
+import os
+
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'sniper_wallets.db')
+
+def init_limit_db():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS limit_orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id TEXT,
+                token_address TEXT,
+                target_percentage REAL,
+                status TEXT DEFAULT 'PENDING'
+            )
+        ''')
+
+def create_limit_order(chat_id: str, token_address: str, target_percentage: float) -> int:
+    init_limit_db()
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO limit_orders (chat_id, token_address, target_percentage, status) VALUES (?, ?, ?, 'PENDING')",
+            (chat_id, token_address, target_percentage)
+        )
+        return cursor.lastrowid
+
+def get_pending_orders() -> list:
+    init_limit_db()
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM limit_orders WHERE status = 'PENDING'")
+        return [dict(row) for row in cursor.fetchall()]
+
+def mark_order_executed(order_id: int):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("UPDATE limit_orders SET status = 'EXECUTED' WHERE id = ?", (order_id,))
