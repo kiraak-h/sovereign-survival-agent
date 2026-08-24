@@ -243,6 +243,8 @@ class TelegramBotService:
             self._handle_import(cmd_text, chat_id, message_id)
         elif cmd_text.startswith("/withdraw"):
             self._handle_withdraw(cmd_text, chat_id)
+        elif cmd_text.startswith("/antrug"):
+            self._handle_antrug(cmd_text, chat_id)
         elif cmd_text.startswith("/snipe"):
             self._handle_sniper(cmd_text, chat_id)
         elif cmd_text.startswith("/copy"):
@@ -454,6 +456,8 @@ class TelegramBotService:
             self.send_message("<b>🟢 Buy Token</b>\n\nReply with: <code>/buy [TOKEN_ADDRESS] [ETH_AMOUNT]</code>\n<i>Example: /buy 0x123... 0.5</i>\n\n<i>🛡️ Every buy is automatically protected by the EVM Honeypot Simulator.</i>", chat_id)
         elif data == "menu_sell":
             self.handle_command("/positions", chat_id)
+        elif data == "menu_scanner":
+            self.send_message("<b>🔍 Token Scanner</b>\n\nReply with: <code>/scan [TOKEN_ADDRESS]</code>\n<i>Runs a full EVM simulation + honeypot + tax analysis on any token before you commit capital.</i>", chat_id)
         elif data == "menu_snipe":
             self.send_message("<b>⚡ Mempool Sniper</b>\n\nReply with: <code>/snipe on [MAX_SPEND_ETH] [MIN_LIQUIDITY_ETH]</code>\n<i>Example: /snipe on 0.05 1.0</i>\n\nOr disable with: <code>/snipe off</code>\n\n<i>🚀 Monitors the Base mempool for brand new token launches and buys in Block 0 before the chart even loads. EVM Shield is active on every snipe.</i>", chat_id)
         elif data == "menu_copy":
@@ -681,3 +685,28 @@ class TelegramBotService:
             f"<i>Listening to Base mempool for new Uniswap pairs...\nEVM Honeypot Shield is active on every snipe.\nType /snipe off to deactivate.</i>",
             chat_id
         )
+
+    def _handle_antrug(self, cmd_text: str, chat_id: str):
+        parts = cmd_text.split()
+        if len(parts) < 2:
+            return self.send_message("❌ Usage: /antrug on  or  /antrug off", chat_id)
+            
+        action = parts[1].lower()
+        from server import _anti_rug_engine
+        
+        if action == "on":
+            _anti_rug_engine.enable(chat_id)
+            self.send_message(
+                "🛡️ <b>Anti-Rugpull Shield ACTIVATED!</b>\n\n"
+                "Monitoring the Base mempool for:\n"
+                "• removeLiquidity() calls\n"
+                "• Malicious setTax() spikes\n"
+                "• Ownership transfers to dead addresses\n\n"
+                "<i>If a rugpull is detected, I will execute a 5x-priority emergency sell to exit before the rug is confirmed.</i>",
+                chat_id
+            )
+        elif action == "off":
+            _anti_rug_engine.disable(chat_id)
+            self.send_message("🔴 <b>Anti-Rugpull Shield Deactivated.</b>", chat_id)
+        else:
+            self.send_message("❌ Usage: /antrug on  or  /antrug off", chat_id)
