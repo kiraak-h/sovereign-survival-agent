@@ -446,6 +446,10 @@ class TelegramBotService:
             pct = int(parts[1])
             token = parts[2]
             self._handle_1click_sell(chat_id, token, pct)
+        elif data == "menu_buy":
+            self.send_message("<b>🟢 Buy Token</b>\n\nReply with: <code>/buy [TOKEN_ADDRESS] [ETH_AMOUNT]</code>\n<i>Example: /buy 0x123... 0.5</i>\n\n<i>🛡️ Every buy is automatically protected by the EVM Honeypot Simulator.</i>", chat_id)
+        elif data == "menu_sell":
+            self.handle_command("/positions", chat_id)
         elif data.startswith("menu_"):
             self.send_message(f"<i>Feature '{data.replace('menu_', '').title()}' coming soon in Phase 6...</i>", chat_id)
         elif data.startswith("solve_idx_"):
