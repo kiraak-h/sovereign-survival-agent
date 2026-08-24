@@ -121,7 +121,10 @@ _daemon = AutonomousDaemon(
 
 
 from core.telegram_bot_service import TelegramBotService
+import threading
+from core.limit_engine import LimitEngine
 
+_limit_engine = LimitEngine()
 _telegram_service = TelegramBotService(
     metabolism=_metabolism,
     daemon=_daemon,
@@ -136,6 +139,7 @@ _telegram_service = TelegramBotService(
 def on_startup():
     """Starts background services including interactive Telegram listener."""
     _telegram_service.start()
+    threading.Thread(target=_limit_engine.poll, daemon=True).start()
 
 @app.on_event("shutdown")
 def on_shutdown():
