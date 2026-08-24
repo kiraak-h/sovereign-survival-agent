@@ -150,46 +150,39 @@ class TelegramBotService:
         is_admin = (str(chat_id) == str(self.allowed_chat_id))
         
         if cmd_text.startswith("/start"):
-        referrer_id = None
-        if " ref_" in cmd_text:
-            referrer_id = cmd_text.split(" ref_")[-1]
-        try:
-            from core.sniper_wallet import get_or_create_wallet
-            wallet = get_or_create_wallet(chat_id, referrer_id)
-            address = wallet["address"]
-        except Exception:
-            address = "0xERROR"
+            referrer_id = None
+            if " ref_" in cmd_text:
+                referrer_id = cmd_text.split(" ref_")[-1]
+            try:
+                from core.sniper_wallet import get_or_create_wallet
+                wallet = get_or_create_wallet(chat_id, referrer_id)
+                address = wallet["address"]
+            except Exception:
+                address = "0xERROR"
+                
+            msg = (
+                f"<b>Sovereign Sniper · Base L2</b> 🛡️\n"
+                f"<code>{address}</code> <i>(Tap to copy)</i>\n"
+                f"<b>Balance:</b> 0.000 ETH ($0.00)\n"
+                f"—\n"
+                f"Click on the Refresh button to update your current balance.\n\n"
+                f"<b>Referral Link</b> | <a href='https://twitter.com/TheSovSniper'>X</a> | Terminal\n"
+                f"<code>https://t.me/SovereignSniperBot?start=ref_{chat_id}</code>"
+            )
             
-        msg = (
-            f"<b>Sovereign Sniper · Base L2</b> 🛡️
-"
-            f"<code>{address}</code> <i>(Tap to copy)</i>
-"
-            f"<b>Balance:</b> 0.000 ETH (.00)
-"
-            f"—
-"
-            f"Click on the Refresh button to update your current balance.
-
-"
-            f"<b>Referral Link</b> | <a href='https://twitter.com/TheSovSniper'>X</a> | Terminal
-"
-            f"<code>https://t.me/SovereignSniperBot?start=ref_{chat_id}</code>"
-        )
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🟢 Buy", "callback_data": "menu_buy"}, {"text": "🔴 Sell", "callback_data": "menu_sell"}],
-                [{"text": "📊 Positions", "callback_data": "menu_positions"}, {"text": "🎯 Limit Orders", "callback_data": "menu_limits"}, {"text": "🕒 DCA Orders", "callback_data": "menu_dca"}],
-                [{"text": "👥 Copy Trade", "callback_data": "menu_copy"}, {"text": "⚡ Sniper", "callback_data": "menu_snipe"}],
-                [{"text": "🔍 Scanner", "callback_data": "menu_scanner"}, {"text": "💰 Rewards", "callback_data": "menu_rewards"}, {"text": "⭐ Watchlist", "callback_data": "menu_watchlist"}],
-                [{"text": "📤 Withdraw", "callback_data": "menu_withdraw"}, {"text": "📥 Import Wallet", "callback_data": "menu_import"}, {"text": "⚙️ Settings", "callback_data": "menu_settings"}],
-                [{"text": "🕳️ Trenches", "callback_data": "menu_trenches"}, {"text": "❓ Help", "callback_data": "menu_help"}, {"text": "🔄 Refresh", "callback_data": "menu_refresh"}]
-            ]
-        }
-        self.send_message(msg, chat_id, reply_markup=keyboard)
-        
-    elif cmd_text.startswith("/takeprofit"):
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": "🟢 Buy", "callback_data": "menu_buy"}, {"text": "🔴 Sell", "callback_data": "menu_sell"}],
+                    [{"text": "📊 Positions", "callback_data": "menu_positions"}, {"text": "🎯 Limit Orders", "callback_data": "menu_limits"}, {"text": "🕒 DCA Orders", "callback_data": "menu_dca"}],
+                    [{"text": "👥 Copy Trade", "callback_data": "menu_copy"}, {"text": "⚡ Sniper", "callback_data": "menu_snipe"}],
+                    [{"text": "🔍 Scanner", "callback_data": "menu_scanner"}, {"text": "💰 Rewards", "callback_data": "menu_rewards"}, {"text": "⭐ Watchlist", "callback_data": "menu_watchlist"}],
+                    [{"text": "📤 Withdraw", "callback_data": "menu_withdraw"}, {"text": "📥 Import Wallet", "callback_data": "menu_import"}, {"text": "⚙️ Settings", "callback_data": "menu_settings"}],
+                    [{"text": "🕳️ Trenches", "callback_data": "menu_trenches"}, {"text": "❓ Help", "callback_data": "menu_help"}, {"text": "🔄 Refresh", "callback_data": "menu_refresh"}]
+                ]
+            }
+            self.send_message(msg, chat_id, reply_markup=keyboard)
+            
+        elif cmd_text.startswith("/takeprofit"):
             parts = cmd_text.split()
             if len(parts) == 3:
                 token = parts[1]
@@ -197,11 +190,7 @@ class TelegramBotService:
                     target_pct = float(parts[2].replace("%", ""))
                     from core.sniper_wallet import create_limit_order
                     create_limit_order(chat_id, token, target_pct)
-                    self.send_message(f"✅ <b>Limit Order Set</b>
-Target: +{target_pct}%
-Token: <code>{token}</code>
-
-<i>The Sovereign Limit Engine is now monitoring this asset.</i>", chat_id)
+                    self.send_message(f"✅ <b>Limit Order Set</b>\nTarget: +{target_pct}%\nToken: <code>{token}</code>\n\n<i>The Sovereign Limit Engine is now monitoring this asset.</i>", chat_id)
                 except ValueError:
                     self.send_message("❌ Invalid percentage. Usage: /takeprofit [token] 50", chat_id)
             else:
@@ -209,79 +198,45 @@ Token: <code>{token}</code>
                 
         elif cmd_text == "/help":
             msg = (
-                "<b><u>How do I use Sovereign Sniper?</u></b>
-"
-                "Check out our <a href='https://youtube.com'>YouTube playlist</a> where we explain it all and join our support chat for additional resources @SovereignSniper.
-
-"
-                "<b><u>Where can I find my referral code?</u></b>
-"
-                "Open the /start menu and click 💰 Rewards.
-
-"
-                "<b><u>What are the fees for using Sovereign?</u></b>
-"
-                "Successful transactions through Sovereign incur a fee of 1.0%, if you were referred by another user (who gets 20% of that). We don't charge a subscription fee or pay-wall any features.
-
-"
-                "<b><u>Security Tips: How can I protect my account from scammers?</u></b>
-"
-                "- Safeguard does <b>NOT</b> require you to login with a phone number or QR code!
-"
-                "- NEVER search for bots in telegram. Use only official links.
-"
-                "- Admins and Mods NEVER dm first or send links, stay safe!
-
-"
-                "<b><u>Trading Tips: Common Failure Reasons</u></b>
-"
-                "- Slippage Exceeded: Up your slippage or sell in smaller increments.
-"
-                "- Insufficient balance for buy amount + gas: Add ETH or reduce your tx amount.
-"
-                "- Timed out: Can occur with heavy network loads, consider increasing your gas tip.
-
-"
-                "<b><u>My PNL seems wrong, why is that?</u></b>
-"
-                "The net profit of a trade takes into consideration the trade's transaction fees. Confirm your gas tip settings and ensure your settings align with your trading size.
-
-"
-                "<b><u>Additional questions or need support?</u></b>
-"
+                "<b><u>How do I use Sovereign Sniper?</u></b>\n"
+                "Check out our <a href='https://youtube.com'>YouTube playlist</a> where we explain it all and join our support chat for additional resources @SovereignSniper.\n\n"
+                "<b><u>Where can I find my referral code?</u></b>\n"
+                "Open the /start menu and click 💰 Rewards.\n\n"
+                "<b><u>What are the fees for using Sovereign?</u></b>\n"
+                "Successful transactions through Sovereign incur a fee of 1.0%, if you were referred by another user (who gets 20% of that). We don't charge a subscription fee or pay-wall any features.\n\n"
+                "<b><u>Security Tips: How can I protect my account from scammers?</u></b>\n"
+                "- Safeguard does <b>NOT</b> require you to login with a phone number or QR code!\n"
+                "- NEVER search for bots in telegram. Use only official links.\n"
+                "- Admins and Mods NEVER dm first or send links, stay safe!\n\n"
+                "<b><u>Trading Tips: Common Failure Reasons</u></b>\n"
+                "- Slippage Exceeded: Up your slippage or sell in smaller increments.\n"
+                "- Insufficient balance for buy amount + gas: Add ETH or reduce your tx amount.\n"
+                "- Timed out: Can occur with heavy network loads, consider increasing your gas tip.\n\n"
+                "<b><u>My PNL seems wrong, why is that?</u></b>\n"
+                "The net profit of a trade takes into consideration the trade's transaction fees. Confirm your gas tip settings and ensure your settings align with your trading size.\n\n"
+                "<b><u>Additional questions or need support?</u></b>\n"
                 "Join our Telegram group @SovereignSniper and one of our admins can assist you."
             )
-            self.send_message(msg, chat_id)
-        except Exception as e:
-            self.send_message(f"Error: {e}", chat_id)
-
-
-    def _handle_pnl(self, cmd_text: str, chat_id: str):
-        try:
-            parts = cmd_text.split()
-            if len(parts) < 3:
-                return self.send_message("Usage: `/pnl [token] [percentage]`\nExample: `/pnl PEPE 420`", chat_id)
+            self.send_message(msg, chat_id, reply_markup={"inline_keyboard": [[{"text": "← Back", "callback_data": "menu_back"}]]})
             
-            token = parts[1]
-            try:
-                percentage = float(parts[2].replace("%", ""))
-            except ValueError:
-                return self.send_message("Please provide a valid number for percentage.", chat_id)
-                
-            from core.sniper_wallet import get_wallet_by_chat_id
-            wallet = get_wallet_by_chat_id(chat_id)
-            # The referral ID for the image is the user themselves, so they can refer others!
-            from core.pnl_generator import generate_pnl_image
-            buf = generate_pnl_image(token, percentage, chat_id)
-            
-            bot_username = "SovereignSniperBot"
-            link = f"https://t.me/{bot_username}?start=ref_{chat_id}"
-            caption = f"🚀 Secured by @TheSovSniper\n\nJoin my squad and trade safely:\n{link}"
-            
-            self.send_photo(buf, caption, chat_id)
-        except Exception as e:
-            self.send_message(f"Error generating PnL: {e}", chat_id)
-
+        elif cmd_text == "/wallet":
+            self._handle_wallet(cmd_text, chat_id)
+        elif cmd_text.startswith("/buy"):
+            self._handle_buy(cmd_text, chat_id)
+        elif cmd_text.startswith("/pnl"):
+            self._handle_pnl(cmd_text, chat_id)
+        elif cmd_text == "/refer":
+            self._handle_referral(cmd_text, chat_id)
+        elif cmd_text == "/scan":
+            self._handle_scan(chat_id)
+        elif cmd_text == "/status":
+            self._handle_status(chat_id)
+        elif cmd_text == "/sweep":
+            self._handle_sweep(chat_id)
+        elif cmd_text == "/vitals":
+            self._handle_vitals(chat_id)
+        else:
+            self.send_message("❌ Unknown command. Type /start", chat_id)
     def _handle_wallet(self, chat_id: str):
         try:
             from core.sniper_wallet import get_or_create_wallet
@@ -412,174 +367,3 @@ Token: <code>{token}</code>
         except Exception as e:
             self.send_message(f"Error generating PnL: {e}", chat_id)
 
-    def _handle_wallet(self, chat_id: str):
-        try:
-            from core.sniper_wallet import get_or_create_wallet
-            wallet = get_or_create_wallet(chat_id)
-            msg = (
-                f"💼 *Your Sovereign Sniper Wallet*\n\n"
-                f"Address: {wallet['address']}\n\n"
-                f"⚠️ *Deposit Base ETH here to trade.*\n"
-                f"Keep your private key secure. Do not share it."
-            )
-            self.send_message(msg, chat_id)
-        except Exception as e:
-            self.send_message(f"Error generating wallet: {e}", chat_id)
-
-    def _handle_buy(self, cmd_text: str, chat_id: str):
-        parts = cmd_text.split()
-        if len(parts) != 3:
-            return self.send_message("Usage: /buy [token_address] [eth_amount]", chat_id)
-            
-        token = parts[1]
-        try:
-            amount = float(parts[2])
-        except ValueError:
-            return self.send_message("Invalid ETH amount.", chat_id)
-            
-        self.send_message(f"🔍 *Scanning* {token} *for honeypots...*", chat_id)
-        
-        import time
-        time.sleep(1)
-        self.send_message("✅ *AST Clear. Zero mints detected. Routing trade...*", chat_id)
-        
-        try:
-            from core.sniper_wallet import get_or_create_wallet
-            from core.dex_router import execute_snipe
-            wallet = get_or_create_wallet(chat_id)
-            result = execute_snipe(wallet['private_key'], token, amount)
-            
-            if result['status'] == 'SUCCESS':
-                msg = (
-                    f"🎯 *Snipe Executed!*\n\n"
-                    f"Token: {token}\n"
-                    f"Amount: {result['trade_eth']} ETH\n"
-                    f"Fee (1%): {result['fee_eth']} ETH\n\n"
-                    f"Tx Hash: [{result['simulated_tx_hash']}](https://basescan.org/tx/{result['simulated_tx_hash']})"
-                )
-                self.send_message(msg, chat_id)
-            else:
-                self.send_message(f"❌ Trade Failed: {result['message']}", chat_id)
-        except Exception as e:
-            self.send_message(f"❌ Error: {e}", chat_id)
-
-    def _handle_direct_solidity_audit(self, code_text: str, chat_id: str):
-        """Audits raw Solidity code dropped into Telegram chat and generates EAS attestation."""
-        self.send_message("🛡️ <b>Analyzing Solidity Code via solc 0.8.20 AST Engine...</b>", chat_id)
-        report = self.static_analyzer.analyze(code_text)
-        
-        score_emoji = "🟢" if report.security_score >= 80 else "🟡" if report.security_score >= 50 else "🔴"
-        finding_lines = []
-        for f in report.findings[:3]:
-            finding_lines.append(f"• <b>[{f.severity}] {f.title}</b> (Line {f.line or 'N/A'})\n  <i>{f.recommendation}</i>")
-
-        findings_summary = "\n".join(finding_lines) if finding_lines else "• No critical vulnerabilities detected."
-        
-        attestation_link = ""
-        if self.eas_manager:
-            try:
-                attestation = self.eas_manager.issue_security_attestation(
-                    target_contract=report.contract_name,
-                    security_score=report.security_score,
-                    is_secure=report.status == "SECURE",
-                    findings_count=len(report.findings),
-                    audit_summary=f"solc 0.8.20 Audit: {report.status}"
-                )
-                attestation_link = f"\n\n🔗 <a href='{attestation.easscan_url}'>View EAS On-Chain Attestation ↗</a>"
-            except Exception:
-                pass
-
-        msg = (
-            f"📋 <b>Smart Contract Security Report</b>\n\n"
-            f"• <b>Contract:</b> {report.contract_name}\n"
-            f"• <b>Compiler:</b> solc {report.solc_version}\n"
-            f"• <b>Security Score:</b> {score_emoji} {report.security_score}/100\n"
-            f"• <b>Status:</b> <b>{report.status}</b>\n\n"
-            f"<b>Key Findings:</b>\n{findings_summary}{attestation_link}"
-        )
-        self.send_message(msg, chat_id)
-
-    def _handle_callback_query(self, query: Dict[str, Any]):
-        """Handles taps on inline keyboard buttons."""
-        query_id = query.get("id")
-        data = query.get("data", "")
-        message = query.get("message", {})
-        chat_id = str(message.get("chat", {}).get("id"))
-
-        # Acknowledge the callback query so Telegram spinner stops
-        if self.token and query_id:
-            try:
-                url = f"https://api.telegram.org/bot{self.token}/answerCallbackQuery"
-                requests.post(url, json={"callback_query_id": query_id}, timeout=5.0)
-            except Exception:
-                pass
-
-        if data == "menu_help":
-            self.handle_command("/help", chat_id)
-        elif data == "menu_back":
-            self.handle_command("/start", chat_id)
-        elif data == "menu_refresh":
-            self.handle_command("/start", chat_id)
-        elif data == "menu_limits":
-            self.send_message("<b>🎯 Limit Orders</b>\n\nReply with: <code>/takeprofit [TOKEN] [PERCENTAGE]</code>\n<i>Example: /takeprofit PEPE 50</i>", chat_id)
-        elif data.startswith("menu_"):
-            self.send_message(f"<i>Feature '{data.replace('menu_', '').title()}' coming soon in Phase 6...</i>", chat_id)
-        elif data.startswith("solve_idx_"):
-            try:
-                idx = int(data.split("_")[-1])
-                target_item = next((b for b in self._cached_bounties if b["index"] == idx), None)
-                if target_item:
-                    self.send_message(f"⚡ 1-Click Solve Triggered for #{idx}: {target_item['target']}!", chat_id)
-                    self._execute_solve(target_item["url"], chat_id)
-                else:
-                    self.send_message("⚠️ Bounty index expired. Run /scan again.", chat_id)
-            except Exception as e:
-                self.send_message(f"Error handling button: {e}", chat_id)
-
-        elif data == "rescan_bounties":
-            self.handle_command("/scan", chat_id)
-
-        elif data == "view_vitals":
-            self.handle_command("/vitals", chat_id)
-
-    def _handle_voice_note(self, message: Dict[str, Any], chat_id: str):
-        """Processes voice note audio files."""
-        self.send_message("🎙️ Voice note received! Interpreting audio instruction...", chat_id)
-        # Default voice instruction interpretation
-        self.handle_command("/help", chat_id)
-
-    def _poll_loop(self):
-        """Long-polling update loop for Telegram Bot API."""
-        while self._is_running:
-            try:
-                url = f"https://api.telegram.org/bot{self.token}/getUpdates"
-                params = {"offset": self._last_update_id + 1, "timeout": 20}
-                res = requests.get(url, params=params, timeout=25.0)
-                if res.status_code == 200:
-                    data = res.json()
-                    for update in data.get("result", []):
-                        self._last_update_id = update.get("update_id", self._last_update_id)
-                        
-                        # 1. Handle Inline Button Clicks
-                        if "callback_query" in update:
-                            self._handle_callback_query(update["callback_query"])
-                            continue
-
-                        # 2. Handle Text Messages
-                        message = update.get("message")
-                        if message:
-                            chat_id = str(message.get("chat", {}).get("id"))
-                            if "text" in message:
-                                self.handle_command(message["text"], chat_id)
-                            elif "voice" in message or "audio" in message:
-                                self._handle_voice_note(message, chat_id)
-                            elif "document" in message:
-                                # Handle dropped .sol file
-                                doc = message.get("document", {})
-                                fname = doc.get("file_name", "")
-                                if fname.endswith(".sol"):
-                                    self.send_message(f"📄 Received Solidity file: <code>{fname}</code>. Auditing...", chat_id)
-                                    self._handle_direct_solidity_audit("pragma solidity ^0.8.20; contract DroppedContract { address owner; }", chat_id)
-            except Exception:
-                time.sleep(3)
-            time.sleep(1)
