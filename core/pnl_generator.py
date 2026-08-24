@@ -14,55 +14,83 @@ def get_font(size):
     return ImageFont.truetype(font_path, size)
 
 def generate_pnl_image(token_name: str, percentage: float, referrer_id: str = None) -> io.BytesIO:
-    # Colors
-    bg_color = (15, 23, 42) # Dark blue/gray (Slate 900)
-    border_color = (6, 182, 212) # Cyan 500
-    text_white = (248, 250, 252) # Slate 50
-    green_color = (34, 197, 94) # Green 500
-    red_color = (239, 68, 68) # Red 500
-    
-    # Dimensions
-    width, height = 800, 450
-    
-    # Create image
-    img = Image.new('RGB', (width, height), color=bg_color)
+    width, height = 700, 900
+    img = Image.new('RGB', (width, height), color=(10, 10, 15))
     draw = ImageDraw.Draw(img)
     
-    # Draw border
-    border_width = 8
-    draw.rectangle([0, 0, width-1, height-1], outline=border_color, width=border_width)
+    green = (34, 197, 94)
+    red = (239, 68, 68)
+    gold = (250, 204, 21)
+    cyan = (6, 182, 212)
     
+    # 1. Add Character Background
+    char_path = 'core/assets/character.jpg'
+    if os.path.exists(char_path):
+        char = Image.open(char_path).convert('RGBA')
+        # Resize to fit the height
+        char = char.resize((900, 900))
+        # Create an alpha mask to fade it out towards the left, and generally lower opacity
+        mask = Image.new('L', char.size, 0)
+        draw_mask = ImageDraw.Draw(mask)
+        # Gradient from left to right (0 to 180 opacity)
+        for x in range(char.size[0]):
+            alpha = int((x / char.size[0]) * 180)
+            draw_mask.line([(x, 0), (x, char.size[1])], fill=alpha)
+        char.putalpha(mask)
+        # Paste on the right side
+        img.paste(char, (width - char.size[0] + 150, 0), char)
+
+    # 2. Diagonal Grid Lines
+    for i in range(0, 1600, 20):
+        draw.line([(i, 0), (0, i)], fill=(20, 20, 25), width=2)
+        
+    # 3. Logo Watermark
+    logo_path = 'core/assets/logo.jpg'
+    if os.path.exists(logo_path):
+        logo = Image.open(logo_path).convert('RGBA')
+        small_size = 100
+        small_logo = logo.resize((small_size, small_size))
+        mask = Image.new('L', (small_size, small_size), 0)
+        ImageDraw.Draw(mask).ellipse((0, 0, small_size, small_size), fill=255)
+        img.paste(small_logo, (width - small_size - 40, 40), mask)
+
     # Fonts
-    font_title = get_font(40)
-    font_token = get_font(60)
-    font_pnl = get_font(120)
-    font_footer = get_font(30)
+    font_large = get_font(140)
+    font_med = get_font(80)
+    font_small = get_font(40)
+    font_tiny = get_font(25)
     
-    # Title
-    draw.text((40, 40), "SOVEREIGN SNIPER", font=font_title, fill=border_color)
+    # Top Logo/Name
+    draw.text((40, 60), "SOVEREIGN SNIPER", font=font_small, fill=(255, 255, 255))
+    draw.line([(40, 110), (width - 160, 110)], fill=cyan, width=3)
     
     # Token
-    draw.text((40, 120), f"Token: {token_name}", font=font_token, fill=text_white)
+    draw.text((40, 150), token_name, font=font_med, fill=(255, 255, 255))
     
     # PnL
-    pnl_str = f"+{percentage:.2f}%" if percentage >= 0 else f"{percentage:.2f}%"
-    pnl_color = green_color if percentage >= 0 else red_color
-    draw.text((40, 200), pnl_str, font=font_pnl, fill=pnl_color)
+    color = green if percentage >= 0 else red
+    sign = "+" if percentage >= 0 else ""
+    draw.text((40, 300), f"{sign}{percentage:.2f}%", font=font_large, fill=color)
+    
+    # Multiplier
+    multiplier = (percentage / 100) + 1
+    draw.text((40, 480), f"{multiplier:.2f}x", font=font_med, fill=cyan)
+    
+    # Fake Entry/Current
+    draw.text((40, 650), "Entry:   PROTECTED", font=font_small, fill=(150, 150, 150))
+    draw.text((40, 710), "Current: PROTECTED", font=font_small, fill=(150, 150, 150))
     
     # Footer
-    footer_text = "@TheSovSniper | Autonomous MEV Execution"
-    draw.text((40, height - 80), footer_text, font=font_footer, fill=(148, 163, 184))
+    draw.rectangle([0, height-100, width, height], fill=(15, 15, 20))
+    draw.text((40, height - 70), "@TheSovSniper | t.me/SovereignSniperBot", font=font_tiny, fill=(200, 200, 200))
     
-
-    
-    # Save to buffer
     buf = io.BytesIO()
     img.save(buf, format='PNG')
     buf.seek(0)
     return buf
 
 if __name__ == '__main__':
-    buf = generate_pnl_image("PEPE/WETH", 420.69, "849201")
-    with open("test_pnl.png", "wb") as f:
+    buf = generate_pnl_image("PEPE/WETH", 450.00)
+    with open("test_character_pnl.png", "wb") as f:
         f.write(buf.read())
-    print("Test image generated.")
+    print("Character PnL generated.")
