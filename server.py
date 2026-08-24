@@ -126,11 +126,17 @@ from core.limit_engine import LimitEngine
 from core.copy_engine import CopyEngine
 from core.mempool_sniper import MempoolSniper
 from core.anti_rug_engine import AntiRugEngine
+from core.dca_engine import DCAEngine
+from core.watchlist_engine import WatchlistEngine
+from core.trenches_engine import TrenchesEngine
 
 _limit_engine = LimitEngine()
 _copy_engine = CopyEngine()
 _mempool_sniper = MempoolSniper()
 _anti_rug_engine = AntiRugEngine()
+_dca_engine = DCAEngine()
+_watchlist_engine = WatchlistEngine()
+_trenches_engine = TrenchesEngine()
 _telegram_service = TelegramBotService(
     metabolism=_metabolism,
     daemon=_daemon,
@@ -149,6 +155,9 @@ def on_startup():
     threading.Thread(target=_copy_engine.poll, daemon=True).start()
     threading.Thread(target=_mempool_sniper.poll, daemon=True).start()
     threading.Thread(target=_anti_rug_engine.poll, daemon=True).start()
+    threading.Thread(target=_dca_engine.poll, daemon=True).start()
+    threading.Thread(target=_watchlist_engine.poll, daemon=True).start()
+    threading.Thread(target=_trenches_engine.poll, daemon=True).start()
 
 @app.on_event("shutdown")
 def on_shutdown():
