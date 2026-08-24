@@ -251,7 +251,8 @@ class TelegramBotService:
             self.send_photo(buf, caption, chat_id)
         except Exception as e:
             self.send_message(f"Error generating PnL: {e}", chat_id)
-\n    def _handle_wallet(self, chat_id: str):
+
+    def _handle_wallet(self, chat_id: str):
         try:
             from core.sniper_wallet import get_or_create_wallet
             wallet = get_or_create_wallet(chat_id)
@@ -380,7 +381,8 @@ class TelegramBotService:
             self.send_photo(buf, caption, chat_id)
         except Exception as e:
             self.send_message(f"Error generating PnL: {e}", chat_id)
-\n    def _handle_wallet(self, chat_id: str):
+
+    def _handle_wallet(self, chat_id: str):
         try:
             from core.sniper_wallet import get_or_create_wallet
             wallet = get_or_create_wallet(chat_id)
