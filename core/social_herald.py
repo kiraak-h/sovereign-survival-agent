@@ -1,18 +1,17 @@
 import os
-import time
 import sqlite3
 import tweepy
-import google.generativeai as genai
+from google import genai
 from typing import Dict, Any
 
 class SovereignHerald:
     def __init__(self):
-        # Initialize Gemini AI
+        # Initialize Gemini AI (Using the new google-genai SDK for Auth Keys)
         gemini_key = os.getenv("GEMINI_API_KEY")
         if not gemini_key:
             raise ValueError("GEMINI_API_KEY missing in .env.agent")
-        genai.configure(api_key=gemini_key)
-        self.ai = genai.GenerativeModel('gemini-1.5-flash')
+            
+        self.ai_client = genai.Client(api_key=gemini_key)
         
         # Twitter API Setup
         self.tw_consumer_key = os.getenv("TWITTER_CONSUMER_KEY")
@@ -35,7 +34,6 @@ class SovereignHerald:
     def fetch_empire_stats(self) -> Dict[str, Any]:
         stats = {"total_revenue_eth": 0.0, "total_users": 0}
         
-        # Fetch Revenue
         try:
             with sqlite3.connect("treasury_ledger.db") as conn:
                 cursor = conn.cursor()
@@ -43,10 +41,9 @@ class SovereignHerald:
                 row = cursor.fetchone()
                 if row and row[0]:
                     stats["total_revenue_eth"] = row[0]
-        except Exception as e:
-            print(f"DB Error: {e}")
+        except Exception:
+            pass
             
-        # Fetch Users
         try:
             with sqlite3.connect("sniper_wallets.db") as conn:
                 cursor = conn.cursor()
@@ -54,8 +51,8 @@ class SovereignHerald:
                 row = cursor.fetchone()
                 if row and row[0]:
                     stats["total_users"] = row[0]
-        except Exception as e:
-            print(f"DB Error: {e}")
+        except Exception:
+            pass
             
         return stats
 
@@ -69,7 +66,10 @@ Do not use emojis excessively. Use words like "Secured", "Executed", "Autonomous
 End the tweet with: Trade safely: t.me/SovereignSniperBot
 '''
         try:
-            response = self.ai.generate_content(prompt)
+            response = self.ai_client.models.generate_content(
+                model="gemini-3.7-flash",
+                contents=prompt
+            )
             return response.text.strip()
         except Exception as e:
             print(f"AI Generation failed: {e}")
@@ -94,6 +94,5 @@ End the tweet with: Trade safely: t.me/SovereignSniperBot
 if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv(".env.agent")
-    
     herald = SovereignHerald()
     herald.broadcast()
