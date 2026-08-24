@@ -88,6 +88,16 @@ class TelegramBotService:
             pass
 
 
+    def send_photo(self, photo_buffer, caption: str, chat_id: str):
+        url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
+        files = {"photo": ("pnl.png", photo_buffer.getvalue(), "image/png")}
+        data = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
+        try:
+            import requests
+            requests.post(url, data=data, files=files, timeout=10.0)
+        except Exception as e:
+            print(f"Failed to send photo: {e}")
+
     def send_message(
         self,
         text: str,
