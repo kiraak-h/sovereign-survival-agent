@@ -53,11 +53,7 @@ def generate_pnl_image(token_name: str, percentage: float, referrer_id: str = No
     footer_text = "@TheSovSniper | Autonomous MEV Execution"
     draw.text((40, height - 80), footer_text, font=font_footer, fill=(148, 163, 184))
     
-    # Ref link (Right aligned)
-    if referrer_id:
-        ref_text = f"Ref: ref_{referrer_id}"
-        bbox = draw.textbbox((0,0), ref_text, font=font_footer)
-        draw.text((width - bbox[2] - 40, height - 80), ref_text, font=font_footer, fill=border_color)
+
     
     # Save to buffer
     buf = io.BytesIO()
