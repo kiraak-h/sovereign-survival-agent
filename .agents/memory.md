@@ -1,27 +1,19 @@
-# Project Memory: Sovereign Survival Agent
+# Sovereign Survival Agent - Universal Memory
 
 ## Context
-This project is an autonomous Web3 smart contract security auditor agent operating on Base L2. 
-It possesses two primary revenue channels:
-1. **Web2 CI/CD (GitHub Actions)**: Developers buy $50 prepaid API keys using USDC on-chain. The backend (/v1/keys/generate) verifies the transaction hash.
-2. **Web3 M2M (A2A API)**: Autonomous trading bots pay $0.25 USDC per audit using EIP-2612 signatures natively. The official Python SDK is sovereign-oracle (published to PyPI).
+The project evolved from a B2B Autonomous Developer Agent (Phase 1-3) into a vertically integrated B2C Telegram Trading Empire (Phase 4). The agent monetizes its proprietary AST Smart Contract Security Oracle by packaging it into a consumer-facing Telegram Sniper Bot, charging a 1% fee on safe trades. We are now entering Phase 5 (The Trojan Killer), expanding the bot's features to dominate the consumer market.
 
 ## Architectural Decisions
-- **Strict Separation of Concerns**: This repository (sovereign-survival-agent) must NEVER interact with or mention the SaaS project repository. They are entirely disconnected.
-- **On-Chain Verification vs Mocks**: The API key generation was previously a mock. It is now cryptographically secured using web3.py to verify transaction receipts against the official Base USDC contract.
-- **EIP-712 over EIP-191**: Machine-to-machine micropayments use th_account.messages.encode_typed_data to construct EIP-712 structured data that perfectly matches the USDC Base Mainnet DOMAIN_SEPARATOR. This ensures the collected PaymentPermit signatures can be successfully executed on-chain.
+1. **Role-Based Access Control (RBAC):** Instead of running two bots, the single @SovereignSniperBot dynamically renders Admin commands (/status, /sweep) only if the chat_id matches the .env.agent TELEGRAM_CHAT_ID.
+2. **Wallet Generation:** Non-custodial base L2 wallets. Symmetrically encrypted via cryptography.fernet. 
+3. **The Referral Engine:** 20% of the 1% trading fee is routed back to the referrer off-chain.
 
 ## Burn Book (Failed Approaches)
-- **Failure**: Returning 
-ull from the A2A API endpoint.
-  - **Reason**: The eturn res_data statement was accidentally deleted during a refactor. Always ensure endpoints return the processed payload.
-- **Failure**: Using ncode_defunct for EIP-2612 permits in wallet.py.
-  - **Reason**: The USDC contract requires strict EIP-712 structured data. Text hashes (ncode_defunct) will result in signature mismatch errors on-chain.
+1. **Volatile Encryption Keys:** Relying purely on os.environ.get('SNIPER_MASTER_KEY', generate_key()) was a critical failure. Render restarts wiped the ephemeral key, permanently locking the sniper_wallets.db records. **Fix:** The key is now persistently saved to sniper_master.key as a fallback.
+2. **HTML Parsing mode in Telegram:** Hardcoding parse_mode="HTML" caused silent 400 Bad Request drops when sending markdown containing < or > characters (e.g., <token>). **Fix:** Escaped angle brackets and corrected send_message signature arguments.
+3. **PowerShell Here-Strings for Python:** PowerShell aggressive interpolation corrupts python syntax when piping strings. **Fix:** Exclusively use pure python scripts or eplace_file_content for syntax injection.
 
-## Active Scratchpad
-- Phase 1 (Web2 Developer Monetization) is complete and live on GitHub Marketplace.
-- Phase 2 (M2M Trading Bot Plugin) is complete and published to PyPI (sovereign-oracle).
-- **Next Steps**: Monitor incoming traffic, deploy the daemon to claim the collected EIP-2612 permits on-chain, or move to Phase 3 (if applicable).
-Pivoted from B2B SaaS to B2C Trading Empire. Built an autonomous Telegram Sniper Bot with embedded AST honeypot protection, non-custodial wallet generation, and a 1% trading fee model.
-## Phase 4: The Sovereign Sniper
-Pivoted from B2B SaaS to B2C Trading Empire. Built an autonomous Telegram Sniper Bot with embedded AST honeypot protection, non-custodial wallet generation, and a 1% trading fee model.
+## Active Scratchpad (Next Immediate Steps)
+* **Status:** Finished Phase 5, Step 1 (Referral Engine).
+* **Next Session Goal:** Execute Phase 5, Step 2 (PnL "Flex" Cards). 
+* **Requirements for Tomorrow:** We will need to build an image generation/rendering pipeline (perhaps HTML-to-Image or Pillow) so the bot can generate dynamic branded profit cards when the user types /pnl [token].

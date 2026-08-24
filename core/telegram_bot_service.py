@@ -77,6 +77,7 @@ class TelegramBotService:
             commands = [
                 {"command": "wallet", "description": "Generate or view your trading wallet"},
                 {"command": "buy", "description": "Securely snipe a token (/buy address amount)"},
+                {"command": "pnl", "description": "Generate a profit flex card (/pnl token %)"},
                 {"command": "refer", "description": "Get your referral link and view earnings"},
                 {"command": "status", "description": "View live agent revenue metrics"},
                 {"command": "sweep", "description": "Force on-chain settlement"},
@@ -151,6 +152,7 @@ class TelegramBotService:
                 "🛡️ *Sovereign Sniper Bot*\n\n"
                 "/wallet - Generate or view your trading wallet\n"
                 "/buy [token] [amount] - Securely snipe a token\n"
+                "/pnl [token] [percentage] - Generate a profit card\n"
                 "/refer - Earn 20% of trading fees\n"
             )
             if is_admin:
@@ -167,6 +169,7 @@ class TelegramBotService:
                 "🛡️ *Sovereign Sniper Bot*\n\n"
                 "/wallet - Generate or view your trading wallet\n"
                 "/buy [token] [amount] - Securely snipe a token\n"
+                "/pnl [token] [percentage] - Generate a profit card\n"
                 "/refer - Earn 20% of trading fees\n"
             )
             if is_admin:
@@ -194,6 +197,9 @@ class TelegramBotService:
         elif cmd_text.startswith("/buy"):
             self._handle_buy(cmd_text, chat_id)
             
+        elif cmd_text.startswith("/pnl"):
+            self._handle_pnl(cmd_text, chat_id)
+            
         elif cmd_text == "/refer":
             self._handle_refer(chat_id)
             
@@ -219,7 +225,33 @@ class TelegramBotService:
         except Exception as e:
             self.send_message(f"Error: {e}", chat_id)
 
-    def _handle_wallet(self, chat_id: str):
+
+    def _handle_pnl(self, cmd_text: str, chat_id: str):
+        try:
+            parts = cmd_text.split()
+            if len(parts) < 3:
+                return self.send_message("Usage: `/pnl [token] [percentage]`\nExample: `/pnl PEPE 420`", chat_id)
+            
+            token = parts[1]
+            try:
+                percentage = float(parts[2].replace("%", ""))
+            except ValueError:
+                return self.send_message("Please provide a valid number for percentage.", chat_id)
+                
+            from core.sniper_wallet import get_wallet_by_chat_id
+            wallet = get_wallet_by_chat_id(chat_id)
+            # The referral ID for the image is the user themselves, so they can refer others!
+            from core.pnl_generator import generate_pnl_image
+            buf = generate_pnl_image(token, percentage, chat_id)
+            
+            bot_username = "SovereignSniperBot"
+            link = f"https://t.me/{bot_username}?start=ref_{chat_id}"
+            caption = f"🚀 Secured by @TheSovSniper\n\nJoin my squad and trade safely:\n{link}"
+            
+            self.send_photo(buf, caption, chat_id)
+        except Exception as e:
+            self.send_message(f"Error generating PnL: {e}", chat_id)
+\n    def _handle_wallet(self, chat_id: str):
         try:
             from core.sniper_wallet import get_or_create_wallet
             wallet = get_or_create_wallet(chat_id)
@@ -322,7 +354,33 @@ class TelegramBotService:
         except Exception as e:
             self.send_message(f"❌ *Sweep Failed*\n{e}", chat_id)
     
-    def _handle_wallet(self, chat_id: str):
+
+    def _handle_pnl(self, cmd_text: str, chat_id: str):
+        try:
+            parts = cmd_text.split()
+            if len(parts) < 3:
+                return self.send_message("Usage: `/pnl [token] [percentage]`\nExample: `/pnl PEPE 420`", chat_id)
+            
+            token = parts[1]
+            try:
+                percentage = float(parts[2].replace("%", ""))
+            except ValueError:
+                return self.send_message("Please provide a valid number for percentage.", chat_id)
+                
+            from core.sniper_wallet import get_wallet_by_chat_id
+            wallet = get_wallet_by_chat_id(chat_id)
+            # The referral ID for the image is the user themselves, so they can refer others!
+            from core.pnl_generator import generate_pnl_image
+            buf = generate_pnl_image(token, percentage, chat_id)
+            
+            bot_username = "SovereignSniperBot"
+            link = f"https://t.me/{bot_username}?start=ref_{chat_id}"
+            caption = f"🚀 Secured by @TheSovSniper\n\nJoin my squad and trade safely:\n{link}"
+            
+            self.send_photo(buf, caption, chat_id)
+        except Exception as e:
+            self.send_message(f"Error generating PnL: {e}", chat_id)
+\n    def _handle_wallet(self, chat_id: str):
         try:
             from core.sniper_wallet import get_or_create_wallet
             wallet = get_or_create_wallet(chat_id)

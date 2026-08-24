@@ -1,0 +1,2 @@
+# QA Catch: Telegram API Silent HTML Parsing Failures
+When using Telegram Bot API with parse_mode='HTML', any message containing unescaped angle brackets like <token> will be treated as an invalid HTML tag. The Telegram API will NOT throw an exception in python; it will silently return a 400 Bad Request, causing the bot to appear unresponsive. ALWAYS use standard brackets [token] or escape HTML entities when using Markdown inside an HTML parse mode payload.
