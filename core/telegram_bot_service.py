@@ -326,7 +326,7 @@ class TelegramBotService:
             from core.sniper_wallet import get_or_create_wallet
             full_wallet = get_or_create_wallet(chat_id)
             
-            result = execute_snipe(full_wallet['private_key'], token, amount, referrer)
+            result = execute_snipe(full_wallet['private_key'], token, amount)
             
             if result['status'] == 'SUCCESS':
                 if referrer and result.get('referrer_reward_eth'):

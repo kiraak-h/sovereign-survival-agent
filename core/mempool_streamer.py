@@ -5,7 +5,6 @@ import websockets
 from dotenv import load_dotenv
 
 load_dotenv()
-
 ALCHEMY_API_KEY = os.getenv("ALCHEMY_API_KEY")
 
 async def stream_mempool():
@@ -19,7 +18,6 @@ async def stream_mempool():
         try:
             print("Mempool Streamer: Connecting to Alchemy WSS...")
             async with websockets.connect(uri) as websocket:
-                # Subscribe to full pending transactions
                 subscribe_msg = {
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -27,44 +25,39 @@ async def stream_mempool():
                     "params": ["alchemy_pendingTransactions"]
                 }
                 await websocket.send(json.dumps(subscribe_msg))
-                
                 response = await websocket.recv()
                 print(f"Mempool Streamer: Subscribed: {response}")
                 
-                # Start consuming the stream
+                # We need to import the engines safely without circular imports
+                import server
+                
                 while True:
                     msg = await websocket.recv()
                     data = json.loads(msg)
                     
                     if "params" in data and "result" in data["params"]:
                         tx = data["params"]["result"]
-                        
-                        # Process the transaction here
-                        # We look for Uniswap V2 Router interactions (0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24 for Base)
-                        # or specifically addLiquidity / removeLiquidity signatures
-                        
                         input_data = tx.get("input", "")
                         
-                        # MethodID for addLiquidityETH is 0xf305d719
-                        # MethodID for removeLiquidityETH is 0x02751cec
-                        # MethodID for setTax (varies, e.g., 0x2235bb70 or similar)
-                        
-                        if input_data.startswith("0xf305d719"):
-                            # This is a liquidity add! Trigger Sniper
-                            print(f"[⚡ SNIPER] Liquidity Added in Mempool! TX: {tx.get('hash')}")
-                            # In real production, we would extract the token address and trigger _mempool_sniper.py
+                        # 0xf305d719 = addLiquidityETH
+                        if input_data.startswith("0xf305d719") and len(input_data) >= 74:
+                            token_address = "0x" + input_data[34:74]
+                            print(f"[⚡ SNIPER] Liquidity Added! Token: {token_address} TX: {tx.get('hash')}")
+                            # Trigger Sniper Engine
+                            server._mempool_sniper.trigger_snipe(token_address)
                             
-                        elif input_data.startswith("0x02751cec"):
-                            # This is a liquidity remove! Trigger Anti-Rug
-                            print(f"[🛡️ ANTI-RUG] Dev Removing Liquidity! TX: {tx.get('hash')}")
-                            # In real production, we would trigger _anti_rug_engine.py
+                        # 0x02751cec = removeLiquidityETH
+                        elif input_data.startswith("0x02751cec") and len(input_data) >= 74:
+                            token_address = "0x" + input_data[34:74]
+                            print(f"[🛡️ ANTI-RUG] Dev Removing Liquidity! Token: {token_address} TX: {tx.get('hash')}")
+                            # Trigger Anti-Rug Engine
+                            server._anti_rug_engine.trigger_rug_evasion(token_address)
                             
         except Exception as e:
             print(f"Mempool Streamer Error: {e}. Reconnecting in 5s...")
             await asyncio.sleep(5)
 
 def start_streamer_task():
-    # If there is a running loop, create task
     try:
         loop = asyncio.get_running_loop()
         loop.create_task(stream_mempool())

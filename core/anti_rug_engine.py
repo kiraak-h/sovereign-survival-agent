@@ -74,6 +74,23 @@ class AntiRugEngine:
             'tx_hash': '0x' + os.urandom(32).hex()
         }
         
+    def trigger_rug_evasion(self, token_address: str):
+        '''Called directly by the Mempool WSS Streamer when a removeLiquidity TX is detected.'''
+        for chat_id, config in list(self.active_guards.items()):
+            if not config['active']:
+                continue
+                
+            # If the user is holding this token, execute emergency sell!
+            # For B2C scale, we'd check their portfolio. For now, we alert and attempt sell.
+            if self.telegram_service:
+                self.telegram_service.send_message(
+                    f"🛡️ <b>RUGPULL DETECTED in Mempool!</b>\n\n"
+                    f"Token: <code>{token_address}</code>\n"
+                    f"Malicious Action: <b>removeLiquidityETH</b>\n\n"
+                    f"⚡ <i>Executing emergency 5x-priority MEV front-run...</i>",
+                    chat_id
+                )
+            self._execute_emergency_sell(chat_id, token_address)
     def poll(self):
         '''Background daemon watching the mempool for rugpull function selectors.'''
         self._is_running = True

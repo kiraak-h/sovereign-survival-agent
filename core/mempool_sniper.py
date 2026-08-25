@@ -38,6 +38,21 @@ class MempoolSniper:
             }
         return None
         
+    def trigger_snipe(self, token_address: str):
+        '''Called directly by the Mempool WSS Streamer when an addLiquidity TX is detected.'''
+        for chat_id, config in list(self.active_snipers.items()):
+            if not config['active']:
+                continue
+                
+            if self.telegram_service:
+                self.telegram_service.send_message(
+                    f"⚡ <b>LIQUIDITY ADDED in Mempool!</b>\n\n"
+                    f"Token: <code>{token_address}</code>\n"
+                    f"Action: <b>addLiquidityETH</b>\n\n"
+                    f"🔫 <i>Firing Block-0 Snipe...</i>",
+                    chat_id
+                )
+            self._execute_snipe(chat_id, token_address, config['max_spend'])
     def poll(self):
         '''Background daemon that watches the mempool for new liquidity pairs.'''
         self._is_running = True
