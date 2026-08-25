@@ -511,22 +511,50 @@ class TelegramBotService:
         elif data == "menu_copy":
             self.send_message("<b>👥 Copy Trade (Vampire Mode)</b>\n\nReply with: <code>/copy [TARGET_ADDRESS] [MAX_SPEND_ETH]</code>\n<i>Example: /copy 0x123... 0.1</i>\n\n<i>🦇 The bot will monitor this wallet in the mempool and front-run their buys so you get in cheaper!</i>", chat_id, reply_markup={"inline_keyboard": [[{"text": "🔙 Back", "callback_data": "menu_back"}]]})
         elif data == "menu_trenches":
-            keyboard = {
-                "inline_keyboard": [
-                    [{"text": "🕳️ Trenches ON", "callback_data": "cmd_trenches_on"}, {"text": "🕳️ Trenches OFF", "callback_data": "cmd_trenches_off"}],
-                    [{"text": "🔙 Back", "callback_data": "menu_back"}]
-                ]
-            }
-            self.send_message(
-                "<b>🕳️ Trenches Mode (Ultra-Degen)</b>\n\n"
-                "Auto-snipes micro-cap launches under your set market cap limit.\n\n"
+            latest_tokens = []
+            try:
+                import urllib.request, json, ssl
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                req = urllib.request.Request('https://api.geckoterminal.com/api/v2/networks/base/new_pools', headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json'})
+                with urllib.request.urlopen(req, context=ctx, timeout=5) as r:
+                    res_data = json.loads(r.read())
+                    pools = res_data.get('data', [])
+                    for p in pools[:5]:
+                        attrs = p.get('attributes', {})
+                        name = attrs.get('name', 'Unknown').split(' / ')[0]
+                        base_token_id = p.get('relationships', {}).get('base_token', {}).get('data', {}).get('id', '')
+                        token_addr = base_token_id.replace('base_', '')
+                        if token_addr:
+                            latest_tokens.append({'name': name, 'address': token_addr})
+            except Exception as e:
+                print("GeckoTerminal Error:", e)
+
+            inline_kb = []
+            msg_text = "<b>☢️ Trenches: Live Base Launches</b>\n\n"
+            
+            if latest_tokens:
+                msg_text += "<i>Latest tokens detected on-chain:</i>\n\n"
+                for t in latest_tokens:
+                    msg_text += f"▪️ <b>{t['name']}</b>\n<code>{t['address']}</code>\n\n"
+                    cb_data = f"tsnipe_{t['address']}"
+                    inline_kb.append([{"text": f"🔫 Snipe {t['name']}", "callback_data": cb_data[:64]}])
+            else:
+                msg_text += "<i>No new tokens found right now.</i>\n\n"
+
+            msg_text += (
+                "<b>Auto-Sniper:</b>\n"
                 "<code>/trenches on [MAX_ETH] [MAX_MCAP]</code>\n"
-                "<i>Example: /trenches on 0.02 50000</i>\n\n"
-                "<code>/trenches off</code> to deactivate\n\n"
-                "⚠️ <b>WARNING:</b> High risk. EVM Shield always active.",
-                chat_id,
-                reply_markup=keyboard
+                "<i>Example: /trenches on 0.02 50000</i>\n"
             )
+
+            inline_kb.append([{"text": "🔄 Refresh", "callback_data": "menu_trenches"}])
+            inline_kb.append([{"text": "☢️ Trenches ON", "callback_data": "cmd_trenches_on"}, {"text": "☢️ Trenches OFF", "callback_data": "cmd_trenches_off"}])
+            inline_kb.append([{"text": "⬅️ Back", "callback_data": "menu_back"}])
+
+            keyboard = {"inline_keyboard": inline_kb}
+            self.send_message(msg_text, chat_id, reply_markup=keyboard)
         elif data == "menu_settings":
             keyboard = {
                 "inline_keyboard": [
@@ -558,6 +586,9 @@ class TelegramBotService:
             self.handle_command("/trenches on 0.05 100000", chat_id)
         elif data == "cmd_trenches_off":
             self.handle_command("/trenches off", chat_id)
+        elif data.startswith("tsnipe_"):
+            token_addr = data.replace("tsnipe_", "")
+            self.send_message(f"<code>/buy {token_addr} 0.05</code>\n<i>Copy and send the above to snipe 0.05 ETH, or edit the amount.</i>", chat_id)
         elif data.startswith("menu_"):
             self.send_message(f"<i>Feature '{data.replace('menu_', '').title()}' coming soon...</i>", chat_id)
         elif data.startswith("solve_idx_"):
