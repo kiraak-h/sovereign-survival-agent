@@ -15,7 +15,7 @@ ALCHEMY_KEY = os.getenv("ALCHEMY_API_KEY", "alch_LVrn_uTV4dQzvOBbGlbBQ")
 ALCHEMY_RPC = "https://base-mainnet.g.alchemy.com/v2/" + ALCHEMY_KEY
 
 # Sovereign Treasury address — receives 1% fee on every trade
-TREASURY_ADDRESS = "0x3C187eC3757e1C76aAC4D83f97608b3cA3191FcA"
+TREASURY_ADDRESS = "0x357bcb14da5C1DcD7c5eF064d154c512951Efa6e"
 
 # Uniswap V2 Router on Base Mainnet
 UNISWAP_V2_ROUTER = "0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24"

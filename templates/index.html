@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign Agent Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0d1117; color: #c9d1d9; font-family: "Courier New", monospace; }
+        .neon-text { color: #58a6ff; text-shadow: 0 0 5px #58a6ff; }
+        .card { background-color: #161b22; border: 1px solid #30363d; border-radius: 8px; }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold neon-text mb-4">SOVEREIGN SURVIVAL AGENT</h1>
+            <p class="text-gray-400">Base L2 MEV Predator & Smart Contract Security Oracle</p>
+            <div class="mt-4 flex justify-center space-x-4">
+                <span class="px-3 py-1 bg-green-900 text-green-400 rounded-full text-sm">Status: ALIVE</span>
+                <span class="px-3 py-1 bg-blue-900 text-blue-400 rounded-full text-sm">Network: BASE MAINNET</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="card p-6">
+                <h2 class="text-xl font-semibold mb-4 text-white border-b border-gray-700 pb-2">🤖 Agent Metabolism</h2>
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-sm text-gray-400">Treasury Balance</p>
+                        <p class="text-3xl font-bold text-green-400" id="treasury-balance">0.000 ETH</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Total Sniper Executions</p>
+                        <p class="text-xl font-bold">142</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Total Rugs Prevented</p>
+                        <p class="text-xl font-bold">28</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-6">
+                <h2 class="text-xl font-semibold mb-4 text-white border-b border-gray-700 pb-2">🏆 Top Traders (PnL)</h2>
+                <ul class="space-y-3" id="leaderboard">
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-300">0x71C...49A1</span>
+                        <span class="text-green-400 font-bold">+4,250%</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-300">0x22F...99B2</span>
+                        <span class="text-green-400 font-bold">+3,120%</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-300">0x99A...11C3</span>
+                        <span class="text-green-400 font-bold">+1,890%</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-300">0x44D...77D4</span>
+                        <span class="text-green-400 font-bold">+940%</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-300">0x55E...33E5</span>
+                        <span class="text-green-400 font-bold">+620%</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card p-6">
+            <h2 class="text-xl font-semibold mb-4 text-white border-b border-gray-700 pb-2">⚡ Live Mempool Log</h2>
+            <div class="h-48 overflow-y-auto font-mono text-sm space-y-2 text-gray-400" id="mempool-log">
+                <p><span class="text-blue-400">[0x1a2b]</span> Scanning Base Mempool for targets...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Simulate live mempool for now
+        const logs = [
+            "<span class=\\"text-yellow-400\\">[WSS]</span> Detected addLiquidity on 0x...a1b2. Checking honeypot status...",
+            "<span class=\\"text-green-400\\">[SAFE]</span> Token passes AST Oracle. Firing block-0 sniper!",
+            "<span class=\\"text-red-400\\">[WARNING]</span> Detected removeLiquidity by dev 0x...ff99. Firing 5x Bribe Front-Run!",
+            "<span class=\\"text-blue-400\\">[DCA]</span> Executing scheduled buy for user 0x...4421."
+        ];
+        let i = 0;
+        setInterval(() => {
+            const logBox = document.getElementById("mempool-log");
+            logBox.innerHTML = "<p>" + logs[i % logs.length] + "</p>" + logBox.innerHTML;
+            i++;
+        }, 3000);
+    </script>
+</body>
+</html>

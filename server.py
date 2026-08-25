@@ -39,6 +39,11 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
 
 
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
+
+templates = Jinja2Templates(directory="templates")
+
 
 from pydantic import BaseModel, Field
 from core.models import (
@@ -158,6 +163,13 @@ def on_startup():
     threading.Thread(target=_dca_engine.poll, daemon=True).start()
     threading.Thread(target=_watchlist_engine.poll, daemon=True).start()
     threading.Thread(target=_trenches_engine.poll, daemon=True).start()
+    
+    # Start the live Alchemy WSS mempool stream
+    try:
+        from core.mempool_streamer import start_streamer_task
+        start_streamer_task()
+    except Exception as e:
+        print("Failed to start WSS streamer:", e)
 
 @app.on_event("shutdown")
 def on_shutdown():
@@ -627,3 +639,7 @@ def serve_public_portal():
 def serve_admin_cockpit(username: str = Depends(get_current_username)):
     with open("templates/admin_cockpit.html", "r", encoding="utf-8") as f:
         return f.read()
+
+@app.get("/", response_class=HTMLResponse, summary="Agent Public Dashboard")
+def serve_dashboard(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
