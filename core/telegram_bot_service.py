@@ -486,8 +486,37 @@ class TelegramBotService:
             self.send_message("<b>⚡ Mempool Sniper</b>\n\nReply with: <code>/snipe on [MAX_SPEND_ETH] [MIN_LIQUIDITY_ETH]</code>\n<i>Example: /snipe on 0.05 1.0</i>\n\nOr disable with: <code>/snipe off</code>\n\n<i>🚀 Monitors the Base mempool for brand new token launches and buys in Block 0 before the chart even loads. EVM Shield is active on every snipe.</i>", chat_id)
         elif data == "menu_copy":
             self.send_message("<b>👥 Copy Trade (Vampire Mode)</b>\n\nReply with: <code>/copy [TARGET_ADDRESS] [MAX_SPEND_ETH]</code>\n<i>Example: /copy 0x123... 0.1</i>\n\n<i>🦇 The bot will monitor this wallet in the mempool and front-run their buys so you get in cheaper!</i>", chat_id)
+        elif data == "menu_trenches":
+            self.send_message(
+                "<b>🕳️ Trenches Mode (Ultra-Degen)</b>\n\n"
+                "Auto-snipes micro-cap launches under your set market cap limit.\n\n"
+                "<code>/trenches on [MAX_ETH] [MAX_MCAP]</code>\n"
+                "<i>Example: /trenches on 0.02 50000</i>\n\n"
+                "<code>/trenches off</code> to deactivate\n\n"
+                "⚠️ <b>WARNING:</b> High risk. EVM Shield always active.",
+                chat_id
+            )
+        elif data == "menu_settings":
+            self.send_message(
+                "<b>⚙️ Settings &amp; Control Panel</b>\n\n"
+                "🛡️ <b>Anti-Rugpull Shield</b>\n"
+                "  <code>/antrug on</code>  |  <code>/antrug off</code>\n\n"
+                "⚡ <b>Mempool Sniper</b>\n"
+                "  <code>/snipe on [ETH] [MIN_LIQ]</code>  |  <code>/snipe off</code>\n\n"
+                "👥 <b>Copy Trading</b>\n"
+                "  <code>/copy [ADDRESS] [MAX_ETH]</code>\n\n"
+                "🕳️ <b>Trenches Mode</b>\n"
+                "  <code>/trenches on [ETH] [MCAP]</code>  |  <code>/trenches off</code>\n\n"
+                "🕒 <b>DCA Orders</b>\n"
+                "  <code>/dca [TOKEN] [ETH] [MINS]</code>  |  <code>/dcaoff [TOKEN]</code>\n\n"
+                "🎯 <b>Take Profit</b>\n"
+                "  <code>/takeprofit [TOKEN] [PCT]</code>\n\n"
+                "🔔 <b>Price Alerts</b>\n"
+                "  <code>/watch [TOKEN] [PRICE] [above/below]</code>",
+                chat_id
+            )
         elif data.startswith("menu_"):
-            self.send_message(f"<i>Feature '{data.replace('menu_', '').title()}' coming soon in Phase 6...</i>", chat_id)
+            self.send_message(f"<i>Feature '{data.replace('menu_', '').title()}' coming soon...</i>", chat_id)
         elif data.startswith("solve_idx_"):
             try:
                 idx = int(data.split("_")[-1])
