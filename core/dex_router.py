@@ -282,3 +282,9 @@ def get_portfolio_positions(address: str, known_tokens: list = None) -> list:
     """Delegates to the Alchemy-powered portfolio engine."""
     from core.portfolio import get_portfolio_positions as _real
     return _real(address, known_tokens)
+
+
+def execute_sell(private_key: str, token_address: str, percentage: float = 100.0) -> dict:
+    """Alias used by limit_engine: sells a percentage of a token bag."""
+    pct = int(percentage)
+    return execute_partial_sell(private_key, token_address, pct)
