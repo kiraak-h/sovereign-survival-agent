@@ -75,13 +75,27 @@ class TelegramBotService:
         try:
             url = f"https://api.telegram.org/bot{self.token}/setMyCommands"
             commands = [
-                {"command": "wallet", "description": "Generate or view your trading wallet"},
-                {"command": "buy", "description": "Securely snipe a token (/buy address amount)"},
-                {"command": "pnl", "description": "Generate a profit flex card (/pnl token %)"},
-                {"command": "refer", "description": "Get your referral link and view earnings"},
-                {"command": "status", "description": "View live agent revenue metrics"},
-                {"command": "sweep", "description": "Force on-chain settlement"},
-                {"command": "help", "description": "Show help and command guide"}
+                {"command": "start",      "description": "Open main menu / Dashboard"},
+                {"command": "wallet",     "description": "View address & balance"},
+                {"command": "import",     "description": "Import private key securely"},
+                {"command": "withdraw",   "description": "Withdraw ETH"},
+                {"command": "buy",        "description": "Buy a token (/buy ADDRESS ETH)"},
+                {"command": "positions",  "description": "View portfolio and 1-click sell"},
+                {"command": "scan",       "description": "Full token intelligence report"},
+                {"command": "takeprofit", "description": "Set take-profit limit (/takeprofit TOKEN PCT)"},
+                {"command": "dca",        "description": "Auto-buy on schedule (/dca TOKEN ETH MINS)"},
+                {"command": "dcaoff",     "description": "Cancel a DCA order (/dcaoff TOKEN)"},
+                {"command": "snipe",      "description": "Mempool sniper on/off"},
+                {"command": "copy",       "description": "Copy trade a wallet (/copy ADDRESS MAX_ETH)"},
+                {"command": "antrug",     "description": "Anti-rugpull shield on/off"},
+                {"command": "trenches",   "description": "Ultra-degen micro-cap sniper on/off"},
+                {"command": "watch",      "description": "Set price alert (/watch TOKEN PRICE above/below)"},
+                {"command": "watchlist",  "description": "View all active price alerts"},
+                {"command": "history",    "description": "View your last 10 trades"},
+                {"command": "rewards",    "description": "Referral dashboard and earnings"},
+                {"command": "pnl",        "description": "Generate PnL flex card"},
+                {"command": "refer",      "description": "Get your referral invite link"},
+                {"command": "help",       "description": "Show help and command guide"}
             ]
             requests.post(url, json={"commands": commands}, timeout=8.0)
         except Exception:
@@ -108,6 +122,12 @@ class TelegramBotService:
         cid = chat_id or self.allowed_chat_id
         if not self.token or not cid:
             return False
+            
+        # Automatically add a Back button if no keyboard is provided,
+        # UNLESS the message is a temporary loading state (contains '...')
+        if reply_markup is None and "..." not in text and "Sovereign Sniper · Base" not in text:
+            reply_markup = {"inline_keyboard": [[{"text": "🔙 Back", "callback_data": "menu_back"}]]}
+            
         try:
             url = f"https://api.telegram.org/bot{self.token}/sendMessage"
             payload: Dict[str, Any] = {
