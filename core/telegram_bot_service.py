@@ -561,13 +561,13 @@ class TelegramBotService:
                 for t in latest_tokens:
                     safe_icon = "🟢" if t['safe'] else "🔴"
                     chg_icon = "+" if t['chg'] >= 0 else ""
-                    msg_text += f"{safe_icon} <b>{t['name']}</b>\n"
+                    msg_text += f"{safe_icon} <b><a href='https://dexscreener.com/base/{t['address']}'>{t['name']}</a></b>\n"
                     msg_text += f"<code>{t['address']}</code>\n"
                     msg_text += f"💧 Liq:  | 📈 MCAP:  | 5m: {chg_icon}{t['chg']:.1f}%\n\n"
                     
                     if t['safe']:
                         cb_data = f"tsnipe_{t['address']}"
-                        inline_kb.append([{"text": f"🔫 1-Click Snipe 0.05 ETH", "callback_data": cb_data[:64]}])
+                        inline_kb.append([{"text": f"🔫 1-Click Snipe 0.02 ETH", "callback_data": cb_data[:64]}])
             else:
                 msg_text += "<i>No new tokens found right now.</i>\n\n"
 
@@ -617,14 +617,14 @@ class TelegramBotService:
             self.handle_command("/trenches off", chat_id)
         elif data.startswith("tsnipe_"):
             token_addr = data.replace("tsnipe_", "")
-            self.send_message(f"⚡ <b>1-CLICK SNIPE INITIATED</b>\n\nToken: <code>{token_addr}</code>\nAmount: 0.05 ETH\n\n<i>Executing via Private MEV Router...</i>", chat_id)
+            self.send_message(f"⚡ <b>1-CLICK SNIPE INITIATED</b>\n\nToken: <code>{token_addr}</code>\nAmount: 0.02 ETH\n\n<i>Executing via Private MEV Router...</i>", chat_id)
             
             try:
                 from core.sniper_wallet import get_or_create_wallet
                 from core.dex_router import execute_snipe
                 
                 wallet = get_or_create_wallet(chat_id)
-                result = execute_snipe(wallet['private_key'], token_addr, 0.05)
+                result = execute_snipe(wallet['private_key'], token_addr, 0.02)
                 
                 if result['status'] == 'SUCCESS':
                     msg = (
