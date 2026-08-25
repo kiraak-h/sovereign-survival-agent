@@ -133,7 +133,7 @@ from core.dca_engine import DCAEngine
 from core.watchlist_engine import WatchlistEngine
 from core.trenches_engine import TrenchesEngine
 
-_limit_engine = LimitEngine()
+_limit_engine = LimitEngine(metabolism=_metabolism)
 _copy_engine = CopyEngine()
 _mempool_sniper = MempoolSniper()
 _anti_rug_engine = AntiRugEngine()

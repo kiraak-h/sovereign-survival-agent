@@ -4,7 +4,7 @@ import json
 from core.sniper_wallet import get_pending_orders, mark_order_executed, get_wallet_by_chat_id
 from core.watchlist_engine import get_real_price
 from core.dex_router import execute_sell
-from core.notifier import SovereignNotifier
+from core.notifier import AgentNotifier
 from core.metabolism import MetabolismManager
 
 class LimitEngine:
@@ -12,9 +12,9 @@ class LimitEngine:
     Scans pending limit orders and executes sells when targets are reached.
     Upgraded to support both Take-Profit (positive targets) and Stop-Loss (negative targets).
     """
-    def __init__(self):
-        self.notifier = SovereignNotifier()
-        self.metabolism = MetabolismManager()
+    def __init__(self, metabolism=None):
+        self.notifier = AgentNotifier()
+        self.metabolism = metabolism
         
     def alert_user(self, chat_id, text):
         if self.notifier:
