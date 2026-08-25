@@ -613,7 +613,7 @@ class TelegramBotService:
     def _handle_positions(self, chat_id: str):
         try:
             from core.sniper_wallet import get_wallet_by_chat_id
-            from core.dex_router import get_portfolio_positions
+            from core.portfolio import get_portfolio_positions, get_eth_balance
             
             wallet = get_wallet_by_chat_id(chat_id)
             if not wallet:
