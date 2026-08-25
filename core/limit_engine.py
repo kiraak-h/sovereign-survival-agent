@@ -1,5 +1,4 @@
 import time
-import random
 import os
 import requests
 import sys
@@ -14,6 +13,7 @@ from core.sniper_wallet import get_pending_orders, mark_order_executed, get_wall
 from core.dex_router import execute_sell
 from core.metabolism import MetabolismManager
 from core.models import AgentState
+from core.watchlist_engine import get_real_price
 
 class LimitEngine:
     def __init__(self):
@@ -48,21 +48,28 @@ class LimitEngine:
             try:
                 orders = get_pending_orders()
                 for order in orders:
-                    pump_chance = random.random()
+                    # Get real price from DexScreener
+                    current_price = get_real_price(order['token_address'])
+                    entry_price = order.get('entry_price', 0.0)
                     
-                    if pump_chance > 0.7:  # 30% chance it hits the target per loop
-                        print(f"[LimitEngine] Target HIT for Order #{order['id']} (+{order['target_percentage']}%)")
+                    if current_price == 0.0 or entry_price == 0.0:
+                        continue
+                        
+                    # Calculate percentage gain
+                    price_increase = (current_price - entry_price) / entry_price * 100
+                    
+                    if price_increase >= order['target_percentage']:
+                        print(f"[LimitEngine] Target HIT for Order #{order['id']} (+{price_increase:.2f}%)")
                         
                         wallet = get_wallet_by_chat_id(order['chat_id'])
                         if not wallet:
                             continue
                             
-                        # Execute the Sell!
+                        # Execute the REAL Sell!
                         result = execute_sell(
                             wallet['private_key'], 
                             order['token_address'], 
-                            order['target_percentage'], 
-                            wallet['referrer_id']
+                            100 # Sell 100% of the bag when take-profit hits
                         )
                         
                         if result['status'] == 'SUCCESS':
@@ -76,9 +83,10 @@ class LimitEngine:
                             
                             # Alert User
                             msg = (
-                                f"🎯 <b>TAKE PROFIT EXECUTED</b> 🎯\n\n"
+                                f"✅ <b>TAKE PROFIT EXECUTED</b> ✅\n\n"
                                 f"<b>Token:</b> <code>{order['token_address']}</code>\n"
                                 f"<b>Target:</b> +{order['target_percentage']}%\n"
+                                f"<b>Actual Gain:</b> +{price_increase:.2f}%\n"
                                 f"<b>Returned:</b> {result['trade_eth']:.4f} ETH\n"
                                 f"<b>Fee:</b> {result['treasury_fee_eth']:.4f} ETH\n\n"
                                 f"<i>Trade automatically settled to your Sovereign Wallet.</i>"
@@ -87,7 +95,7 @@ class LimitEngine:
             except Exception as e:
                 print(f"[LimitEngine] Error: {e}")
                 
-            time.sleep(5)
+            time.sleep(30) # Poll every 30s
 
 if __name__ == "__main__":
     engine = LimitEngine()

@@ -1,5 +1,4 @@
 import time
-import random
 import sqlite3
 import os
 
@@ -51,17 +50,13 @@ def cancel_dca_order(chat_id: str, token: str):
 
 
 class DCAEngine:
-    '''
-    Phase 7.2: Dollar Cost Averaging Daemon.
-    Executes recurring buys on a timer, bypassing emotion and timing risk.
-    '''
     def __init__(self, telegram_service=None):
         self.telegram_service = telegram_service
         
     def poll(self):
         init_dca_db()
         while True:
-            time.sleep(60) # Check every minute
+            time.sleep(60)
             try:
                 orders = get_due_dca_orders()
                 for order in orders:
@@ -71,23 +66,19 @@ class DCAEngine:
                 
     def _execute_dca(self, order: dict):
         try:
-            from core.sniper_wallet import get_wallet_by_chat_id
-            from core.evm_simulator import HoneypotSimulator
+            from core.sniper_wallet import get_or_create_wallet
+            from core.token_scanner import check_honeypot
             from core.dex_router import execute_snipe
             
-            wallet = get_wallet_by_chat_id(order['chat_id'])
+            wallet = get_or_create_wallet(order['chat_id'])
             if not wallet:
                 return
             
-            # Always run honeypot check before DCA buy
-            sim = HoneypotSimulator()
-            result = sim.simulate_trade_lifecycle(order['token'], order['eth_amount'])
-            
-            if result['is_honeypot']:
+            if not check_honeypot(order['token']):
                 if self.telegram_service:
                     self.telegram_service.send_message(
-                        f"🚨 <b>DCA Buy Skipped — Honeypot Detected!</b>\\n"
-                        f"Token: <code>{order['token']}</code>\\n"
+                        f"🚨 <b>DCA Buy Skipped - Honeypot Detected!</b>\n"
+                        f"Token: <code>{order['token']}</code>\n"
                         f"<i>Rescheduling next attempt in {order['interval_minutes']} minutes.</i>",
                         order['chat_id']
                     )
@@ -95,11 +86,11 @@ class DCAEngine:
                 trade_result = execute_snipe(wallet['private_key'], order['token'], order['eth_amount'])
                 if self.telegram_service and trade_result['status'] == 'SUCCESS':
                     self.telegram_service.send_message(
-                        f"🔄 <b>DCA Buy Executed!</b>\\n\\n"
-                        f"Token: <code>{order['token']}</code>\\n"
-                        f"Amount: {trade_result['trade_eth']} ETH\\n"
-                        f"Next buy in: {order['interval_minutes']} minutes\\n"
-                        f"Tx: <code>{trade_result['simulated_tx_hash']}</code>",
+                        f"✅ <b>DCA Buy Executed!</b>\n\n"
+                        f"Token: <code>{order['token']}</code>\n"
+                        f"Amount: {trade_result['trade_eth']} ETH\n"
+                        f"Next buy in: {order['interval_minutes']} minutes\n"
+                        f"Tx: <code>{trade_result.get('tx_hash', trade_result.get('simulated_tx_hash'))}</code>",
                         order['chat_id']
                     )
                     

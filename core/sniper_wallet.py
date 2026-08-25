@@ -37,6 +37,7 @@ def init_db():
                 chat_id TEXT,
                 token_address TEXT,
                 target_percentage REAL,
+                entry_price REAL DEFAULT 0.0,
                 status TEXT DEFAULT 'PENDING'
             )
         ''')
@@ -128,11 +129,14 @@ def get_referral_stats(chat_id: str) -> dict:
 
 def create_limit_order(chat_id: str, token_address: str, target_percentage: float) -> int:
     init_db()
+    from core.watchlist_engine import get_real_price
+    entry_price = get_real_price(token_address)
+    
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO limit_orders (chat_id, token_address, target_percentage, status) VALUES (?, ?, ?, 'PENDING')",
-            (chat_id, token_address, target_percentage)
+            "INSERT INTO limit_orders (chat_id, token_address, target_percentage, entry_price, status) VALUES (?, ?, ?, ?, 'PENDING')",
+            (chat_id, token_address, target_percentage, entry_price)
         )
         return cursor.lastrowid
 

@@ -308,9 +308,13 @@ class TelegramBotService:
         except ValueError:
             return self.send_message("Invalid ETH amount.", chat_id)
             
-        self.send_message(f"🔍 *Scanning* `{token}` *for honeypots...*", chat_id)
-        import time
-        time.sleep(1)
+        self.send_message(f"🔍 *Scanning* `{token}` *for honeypots via GoPlus...*", chat_id)
+        from core.token_scanner import check_honeypot
+        is_safe = check_honeypot(token)
+        
+        if not is_safe:
+            return self.send_message(f"🚨 *AST WARNING: Token {token} is a HONEYPOT. Buy aborted.*", chat_id)
+            
         self.send_message("✅ *AST Clear. Zero mints detected. Routing trade...*", chat_id)
         
         try:
