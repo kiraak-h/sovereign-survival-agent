@@ -527,9 +527,11 @@ class TelegramBotService:
                 for p in pools:
                     attrs = p.get('attributes', {})
                     name = attrs.get('name', 'Unknown').split(' / ')[0]
-                    fdv = float(attrs.get('fdv_usd', 0) or 0)
-                    liq = float(attrs.get('reserve_in_usd', 0) or 0)
-                    chg = float(attrs.get('price_change_percentage', {}).get('m5', 0) or 0)
+                    fdv = float(attrs.get('fdv_usd') or 0)
+                    liq = float(attrs.get('reserve_in_usd') or 0)
+                    # Safely handle None for price_change_percentage
+                    chg_dict = attrs.get('price_change_percentage') or {}
+                    chg = float(chg_dict.get('m5') or 0)
                     
                     base_token_id = p.get('relationships', {}).get('base_token', {}).get('data', {}).get('id', '')
                     token_addr = base_token_id.replace('base_', '')
@@ -576,6 +578,7 @@ class TelegramBotService:
             )
 
             inline_kb.append([{"text": "🔄 Refresh Live Data", "callback_data": "menu_trenches"}])
+            inline_kb.append([{"text": "☢️ Trenches ON", "callback_data": "cmd_trenches_on"}, {"text": "☢️ Trenches OFF", "callback_data": "cmd_trenches_off"}])
             inline_kb.append([{"text": "⬅️ Back", "callback_data": "menu_back"}])
 
             keyboard = {"inline_keyboard": inline_kb}
