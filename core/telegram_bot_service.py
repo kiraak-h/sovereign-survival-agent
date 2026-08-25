@@ -227,8 +227,6 @@ class TelegramBotService:
             self._handle_pnl(cmd_text, chat_id)
         elif cmd_text == "/refer":
             self._handle_referral(cmd_text, chat_id)
-        elif cmd_text == "/scan":
-            self._handle_scan(chat_id)
         elif cmd_text == "/status":
             self._handle_status(chat_id)
         elif cmd_text == "/sweep":
@@ -237,28 +235,26 @@ class TelegramBotService:
             self._handle_vitals(chat_id)
         elif cmd_text == "/positions":
             self._handle_positions(chat_id)
-        elif cmd_text.startswith("/import"):
-            # We need the message_id to delete it for security!
-            pass # We will handle this by injecting message_id parsing later, but for now we'll write a basic handler
-            self._handle_import(cmd_text, chat_id, message_id)
-        elif cmd_text.startswith("/withdraw"):
-            self._handle_withdraw(cmd_text, chat_id)
-        elif cmd_text.startswith("/scan"):
-            self._handle_scan(cmd_text, chat_id)
-        elif cmd_text.startswith("/dca"):
-            self._handle_dca(cmd_text, chat_id)
-        elif cmd_text.startswith("/dcaoff"):
-            self._handle_dcaoff(cmd_text, chat_id)
-        elif cmd_text.startswith("/watch"):
-            self._handle_watch(cmd_text, chat_id)
         elif cmd_text == "/watchlist":
             self._handle_watchlist(chat_id)
-        elif cmd_text.startswith("/trenches"):
-            self._handle_trenches(cmd_text, chat_id)
         elif cmd_text == "/history":
             self._handle_history(chat_id)
         elif cmd_text == "/rewards":
             self._handle_rewards(chat_id)
+        elif cmd_text.startswith("/scan"):
+            self._handle_scan(cmd_text, chat_id)
+        elif cmd_text.startswith("/import"):
+            self._handle_import(cmd_text, chat_id, message_id)
+        elif cmd_text.startswith("/withdraw"):
+            self._handle_withdraw(cmd_text, chat_id)
+        elif cmd_text.startswith("/dcaoff"):
+            self._handle_dcaoff(cmd_text, chat_id)
+        elif cmd_text.startswith("/dca"):
+            self._handle_dca(cmd_text, chat_id)
+        elif cmd_text.startswith("/watch"):
+            self._handle_watch(cmd_text, chat_id)
+        elif cmd_text.startswith("/trenches"):
+            self._handle_trenches(cmd_text, chat_id)
         elif cmd_text.startswith("/antrug"):
             self._handle_antrug(cmd_text, chat_id)
         elif cmd_text.startswith("/snipe"):
