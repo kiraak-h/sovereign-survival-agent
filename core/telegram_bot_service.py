@@ -342,7 +342,7 @@ class TelegramBotService:
                     f"Token: `{token}`\n"
                     f"Amount: {result['trade_eth']:.4f} ETH\n"
                     f"Total Fee (1%): {result['total_fee_eth']:.5f} ETH\n\n"
-                    f"Tx Hash: [{result['simulated_tx_hash']}](https://basescan.org/tx/{result['simulated_tx_hash']})"
+                    f"Tx Hash: [{result.get('tx_hash', 'Unknown')}](https://basescan.org/tx/{result.get('tx_hash', '')})"
                 )
                 self.send_message(msg, chat_id)
             else:
