@@ -68,7 +68,6 @@ from channels.service_oracle import ServiceOracle
 from channels.subcontracting_engine import A2ASubcontractingEngine
 from channels.social_broadcaster import SocialMarketingBroadcaster, SocialPostResult
 from channels.multi_platform_webhooks import MultiPlatformWebhookHandler, WebhookEventResponse
-from simulation.market_simulator import MarketSimulator
 from scripts.broadcast_live_tx import check_status_and_deploy, get_connected_w3, BASE_SEPOLIA_USDC
 
 
@@ -92,7 +91,6 @@ _wallet = SovereignWallet(_agent_state)
 _policy = SurvivalPolicyEngine(_agent_state)
 _oracle = ServiceOracle(_metabolism, _policy, _wallet, base_audit_fee_usdc=0.50)
 _a2a_engine = A2ASubcontractingEngine(_metabolism, _policy, _wallet)
-_market = MarketSimulator(_wallet)
 _static_analyzer = RealSolidityStaticAnalyzer()
 _usdc_client = BaseSepoliaUSDCClient()
 _llm_gateway = LLMGateway(metabolism=_metabolism)
@@ -643,3 +641,4 @@ def serve_admin_cockpit(username: str = Depends(get_current_username)):
 @app.get("/", response_class=HTMLResponse, summary="Agent Public Dashboard")
 def serve_dashboard(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+

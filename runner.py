@@ -15,7 +15,6 @@ from core.policy_engine import SurvivalPolicyEngine
 from core.wallet import SovereignWallet
 from channels.service_oracle import ServiceOracle
 from channels.bounty_hunter import BountyHunter
-from simulation.market_simulator import MarketSimulator
 from dashboard import AgentDashboard
 
 
@@ -128,3 +127,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
