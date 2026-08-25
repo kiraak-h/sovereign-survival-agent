@@ -2,6 +2,7 @@
             latest_tokens = []
             try:
                 import urllib.request, json, ssl
+                from datetime import datetime
                 ctx = ssl.create_default_context()
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
@@ -17,15 +18,24 @@
                     name = attrs.get('name', 'Unknown').split(' / ')[0]
                     fdv = float(attrs.get('fdv_usd') or 0)
                     liq = float(attrs.get('reserve_in_usd') or 0)
-                    # Safely handle None for price_change_percentage
-                    chg_dict = attrs.get('price_change_percentage') or {}
-                    chg = float(chg_dict.get('m5') or 0)
                     
+                    chg_dict = attrs.get('price_change_percentage') or {}
+                    chg = float(chg_dict.get('m5') or chg_dict.get('m15') or 0)
+                    
+                    created_at = attrs.get('pool_created_at', '')
+                    age_mins = 0
+                    if created_at:
+                        try:
+                            # 2026-08-25T15:17:23Z
+                            created_dt = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ")
+                            age_mins = int((datetime.utcnow() - created_dt).total_seconds() / 60)
+                        except: pass
+
                     base_token_id = p.get('relationships', {}).get('base_token', {}).get('data', {}).get('id', '')
                     token_addr = base_token_id.replace('base_', '')
                     if token_addr:
                         tokens_list.append(token_addr)
-                        latest_tokens.append({'name': name, 'address': token_addr, 'fdv': fdv, 'liq': liq, 'chg': chg, 'safe': True})
+                        latest_tokens.append({'name': name, 'address': token_addr, 'fdv': fdv, 'liq': liq, 'chg': chg, 'safe': True, 'age': age_mins})
                         
                 # Batch GoPlus Security Scan
                 if tokens_list:
@@ -49,13 +59,13 @@
                 for t in latest_tokens:
                     safe_icon = "🟢" if t['safe'] else "🔴"
                     chg_icon = "+" if t['chg'] >= 0 else ""
-                    msg_text += f"{safe_icon} <b>{t['name']}</b>\n"
+                    msg_text += f"{safe_icon} <b><a href='https://dexscreener.com/base/{t['address']}'>{t['name']}</a></b> (Age: {t['age']}m)\n"
                     msg_text += f"<code>{t['address']}</code>\n"
-                    msg_text += f"💧 Liq:  | 📈 MCAP:  | 5m: {chg_icon}{t['chg']:.1f}%\n\n"
+                    msg_text += f"💧 Liq: <b></b> | 📈 MCAP: <b></b> | 5m: {chg_icon}{t['chg']:.1f}%\n\n"
                     
                     if t['safe']:
                         cb_data = f"tsnipe_{t['address']}"
-                        inline_kb.append([{"text": f"🔫 1-Click Snipe 0.05 ETH", "callback_data": cb_data[:64]}])
+                        inline_kb.append([{"text": f"🔫 1-Click Snipe 0.02 ETH", "callback_data": cb_data[:64]}])
             else:
                 msg_text += "<i>No new tokens found right now.</i>\n\n"
 
