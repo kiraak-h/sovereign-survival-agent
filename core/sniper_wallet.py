@@ -16,9 +16,10 @@ if not MASTER_KEY:
             f.write(MASTER_KEY)
 
 cipher = Fernet(MASTER_KEY.encode())
+DB_PATH = "sniper_wallets.db"
 
 def init_db():
-    with sqlite3.connect("sniper_wallets.db") as conn:
+    with sqlite3.connect(DB_PATH) as conn:
         conn.execute('''CREATE TABLE IF NOT EXISTS users
                         (chat_id TEXT PRIMARY KEY, 
                          wallet_address TEXT, 
@@ -29,20 +30,31 @@ def init_db():
             conn.execute('ALTER TABLE users ADD COLUMN referral_rewards_eth REAL DEFAULT 0.0')
         except sqlite3.OperationalError:
             pass # Columns already exist
+            
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS limit_orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id TEXT,
+                token_address TEXT,
+                target_percentage REAL,
+                status TEXT DEFAULT 'PENDING'
+            )
+        ''')
 
 def get_or_create_wallet(chat_id: str, referrer_id: Optional[str] = None) -> dict:
     init_db()
-    with sqlite3.connect("sniper_wallets.db") as conn:
+    with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE chat_id = ?", (chat_id,))
         row = cursor.fetchone()
         
         if row:
-            # Already exists, just return it
             return {
                 "address": row["wallet_address"],
-                "private_key": cipher.decrypt(row["encrypted_private_key"].encode()).decode()
+                "private_key": cipher.decrypt(row["encrypted_private_key"].encode()).decode(),
+                "referrer_id": row["referrer_id"],
+                "rewards": row["referral_rewards_eth"]
             }
             
         Account.enable_unaudited_hdwallet_features()
@@ -54,12 +66,14 @@ def get_or_create_wallet(chat_id: str, referrer_id: Optional[str] = None) -> dic
         
         return {
             "address": acct.address,
-            "private_key": acct.key.hex()
+            "private_key": acct.key.hex(),
+            "referrer_id": referrer_id,
+            "rewards": 0.0
         }
 
 def get_wallet_by_chat_id(chat_id: str) -> Optional[dict]:
     init_db()
-    with sqlite3.connect("sniper_wallets.db") as conn:
+    with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE chat_id = ?", (chat_id,))
@@ -67,19 +81,43 @@ def get_wallet_by_chat_id(chat_id: str) -> Optional[dict]:
         if row:
             return {
                 "address": row["wallet_address"],
+                "private_key": cipher.decrypt(row["encrypted_private_key"].encode()).decode(),
                 "referrer_id": row["referrer_id"],
                 "rewards": row["referral_rewards_eth"]
             }
     return None
 
+def import_wallet(chat_id: str, private_key: str) -> str:
+    Account.enable_unaudited_hdwallet_features()
+    # Strip 0x if present for uniformity in encryption
+    if private_key.startswith("0x"):
+        private_key = private_key[2:]
+        
+    account = Account.from_key(private_key)
+    address = account.address
+    enc_pk = cipher.encrypt(private_key.encode()).decode()
+    
+    init_db()
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT chat_id FROM users WHERE chat_id = ?", (chat_id,))
+        existing = cursor.fetchone()
+        
+        if existing:
+            cursor.execute("UPDATE users SET wallet_address = ?, encrypted_private_key = ? WHERE chat_id = ?", (address, enc_pk, chat_id))
+        else:
+            cursor.execute("INSERT INTO users (chat_id, wallet_address, encrypted_private_key, referrer_id, referral_rewards_eth) VALUES (?, ?, ?, ?, 0.0)", (chat_id, address, enc_pk, None))
+            
+    return address
+
 def add_referral_reward(chat_id: str, amount_eth: float):
     init_db()
-    with sqlite3.connect("sniper_wallets.db") as conn:
+    with sqlite3.connect(DB_PATH) as conn:
         conn.execute("UPDATE users SET referral_rewards_eth = referral_rewards_eth + ? WHERE chat_id = ?", (amount_eth, chat_id))
 
 def get_referral_stats(chat_id: str) -> dict:
     init_db()
-    with sqlite3.connect("sniper_wallets.db") as conn:
+    with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM users WHERE referrer_id = ?", (chat_id,))
         count = cursor.fetchone()[0]
@@ -87,25 +125,9 @@ def get_referral_stats(chat_id: str) -> dict:
         row = cursor.fetchone()
         rewards = row[0] if row else 0.0
         return {"count": count, "rewards": rewards}
-import sqlite3
-import os
-
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'sniper_wallets.db')
-
-def init_limit_db():
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS limit_orders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                chat_id TEXT,
-                token_address TEXT,
-                target_percentage REAL,
-                status TEXT DEFAULT 'PENDING'
-            )
-        ''')
 
 def create_limit_order(chat_id: str, token_address: str, target_percentage: float) -> int:
-    init_limit_db()
+    init_db()
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -115,7 +137,7 @@ def create_limit_order(chat_id: str, token_address: str, target_percentage: floa
         return cursor.lastrowid
 
 def get_pending_orders() -> list:
-    init_limit_db()
+    init_db()
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -125,27 +147,3 @@ def get_pending_orders() -> list:
 def mark_order_executed(order_id: int):
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("UPDATE limit_orders SET status = 'EXECUTED' WHERE id = ?", (order_id,))
-import sqlite3
-import os
-from eth_account import Account
-import secrets
-
-Account.enable_unaudited_hdwallet_features()
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'sniper_wallets.db')
-
-def import_wallet(chat_id: str, private_key: str) -> str:
-    account = Account.from_key(private_key)
-    address = account.address
-    
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        # Check if exists
-        cursor.execute("SELECT id FROM wallets WHERE chat_id = ?", (chat_id,))
-        existing = cursor.fetchone()
-        
-        if existing:
-            cursor.execute("UPDATE wallets SET address = ?, private_key = ? WHERE chat_id = ?", (address, private_key, chat_id))
-        else:
-            cursor.execute("INSERT INTO wallets (chat_id, address, private_key, referrer_id) VALUES (?, ?, ?, ?)", (chat_id, address, private_key, None))
-            
-    return address
