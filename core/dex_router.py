@@ -49,7 +49,7 @@ def _get_nonce(address: str) -> int:
     return int(resp.get("result", "0x0"), 16)
 
 
-def execute_snipe(private_key: str, token_address: str, amount_eth: float) -> dict:
+def execute_snipe(private_key: str, token_address: str, amount_eth: float, mev_tip_eth: float = 0.0) -> dict:
     """
     Executes a real token buy on Uniswap V2 (Base Mainnet) via Alchemy.
     1. Deducts 1% treasury fee from amount.
@@ -87,16 +87,23 @@ def execute_snipe(private_key: str, token_address: str, amount_eth: float) -> di
         )
         calldata = selector + encoded
 
+        gas_limit = 300000
         # Build transaction
         tx = {
             "chainId": chain_id,
             "to": UNISWAP_V2_ROUTER,
             "value": trade_wei,
-            "gas": 300000,
-            "gasPrice": gas_price,
+            "gas": gas_limit,
             "nonce": nonce,
             "data": "0x" + calldata.hex(),
         }
+        if mev_tip_eth > 0:
+            tip_per_gas = int(mev_tip_eth * 1e18) // gas_limit
+            tx["maxPriorityFeePerGas"] = tip_per_gas
+            tx["maxFeePerGas"] = gas_price + tip_per_gas
+        else:
+            tx["gasPrice"] = gas_price
+
 
         signed = account.sign_transaction(tx)
         raw_hex = "0x" + signed.raw_transaction.hex()
@@ -127,7 +134,7 @@ def execute_snipe(private_key: str, token_address: str, amount_eth: float) -> di
                 "status": "SUCCESS",
                 "trade_eth": round(trade_eth, 6),
                 "fee_eth": round(fee, 6),
-                "mev_bribe_eth": 0.0,
+                "mev_bribe_eth": mev_tip_eth,
                 "builder": "Alchemy (Base Mainnet)",
                 "simulated_tx_hash": tx_hash,
             }
@@ -195,7 +202,7 @@ def execute_withdrawal(private_key: str, destination: str, amount) -> dict:
         return {"status": "ERROR", "message": str(e)}
 
 
-def execute_partial_sell(private_key: str, token: str, pct: int) -> dict:
+def execute_partial_sell(private_key: str, token: str, pct: int, mev_tip_eth: float = 0.0) -> dict:
     """
     Sells a percentage of an ERC-20 token bag.
     Reads current balance, calculates pct%, and executes swapExactTokensForETH.
@@ -229,12 +236,19 @@ def execute_partial_sell(private_key: str, token: str, pct: int) -> dict:
         gas_price = _get_gas_price()
         nonce = _get_nonce(sender)
 
+        approve_gas_limit = 100000
         approve_tx = {
             "chainId": chain_id, "to": token,
-            "value": 0, "gas": 100000,
-            "gasPrice": gas_price, "nonce": nonce,
+            "value": 0, "gas": approve_gas_limit,
+            "nonce": nonce,
             "data": approve_data,
         }
+        if mev_tip_eth > 0:
+            # We don't bribe heavily on approve, just slight bump
+            approve_tx["gasPrice"] = int(gas_price * 1.5)
+        else:
+            approve_tx["gasPrice"] = gas_price
+
         signed_approve = account.sign_transaction(approve_tx)
         _rpc("eth_sendRawTransaction", ["0x" + signed_approve.raw_transaction.hex()])
 
@@ -247,12 +261,20 @@ def execute_partial_sell(private_key: str, token: str, pct: int) -> dict:
             [sell_amount, 0, path, sender, deadline]
         )).hex()
 
+        swap_gas_limit = 300000
         swap_tx = {
             "chainId": chain_id, "to": UNISWAP_V2_ROUTER,
-            "value": 0, "gas": 300000,
-            "gasPrice": gas_price, "nonce": nonce + 1,
+            "value": 0, "gas": swap_gas_limit,
+            "nonce": nonce + 1,
             "data": swap_data,
         }
+        if mev_tip_eth > 0:
+            tip_per_gas = int(mev_tip_eth * 1e18) // swap_gas_limit
+            swap_tx["maxPriorityFeePerGas"] = tip_per_gas
+            swap_tx["maxFeePerGas"] = gas_price + tip_per_gas
+        else:
+            swap_tx["gasPrice"] = gas_price
+
         signed_swap = account.sign_transaction(swap_tx)
         resp = _rpc("eth_sendRawTransaction", ["0x" + signed_swap.raw_transaction.hex()])
 
@@ -273,7 +295,7 @@ def get_portfolio_positions(address: str, known_tokens: list = None) -> list:
     return _real(address, known_tokens)
 
 
-def execute_sell(private_key: str, token_address: str, percentage: float = 100.0) -> dict:
+def execute_sell(private_key: str, token_address: str, percentage: float = 100.0, mev_tip_eth: float = 0.0) -> dict:
     """Alias used by limit_engine: sells a percentage of a token bag."""
     pct = int(percentage)
-    return execute_partial_sell(private_key, token_address, pct)
+    return execute_partial_sell(private_key, token_address, pct, mev_tip_eth)
