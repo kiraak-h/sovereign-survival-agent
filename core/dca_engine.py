@@ -1,11 +1,11 @@
 import time
-import sqlite3
+from core.db import get_db
 import os
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'sniper_wallets.db')
 
 def init_dca_db():
-    with sqlite3.connect(DB_PATH) as conn:
+    with get_db(DB_PATH) as conn:
         conn.execute('''CREATE TABLE IF NOT EXISTS dca_orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             chat_id TEXT NOT NULL,
@@ -20,7 +20,7 @@ def init_dca_db():
 def create_dca_order(chat_id: str, token: str, eth_amount: float, interval_minutes: int):
     init_dca_db()
     next_ts = time.time() + (interval_minutes * 60)
-    with sqlite3.connect(DB_PATH) as conn:
+    with get_db(DB_PATH) as conn:
         conn.execute(
             'INSERT INTO dca_orders (chat_id, token_address, eth_amount, interval_minutes, next_execution_ts) VALUES (?,?,?,?,?)',
             (chat_id, token, eth_amount, interval_minutes, next_ts)
@@ -30,7 +30,7 @@ def create_dca_order(chat_id: str, token: str, eth_amount: float, interval_minut
 def get_due_dca_orders():
     init_dca_db()
     now = time.time()
-    with sqlite3.connect(DB_PATH) as conn:
+    with get_db(DB_PATH) as conn:
         rows = conn.execute(
             "SELECT id, chat_id, token_address, eth_amount, interval_minutes FROM dca_orders WHERE status='ACTIVE' AND next_execution_ts <= ?",
             (now,)
@@ -39,12 +39,12 @@ def get_due_dca_orders():
 
 def reschedule_dca_order(order_id: int, interval_minutes: int):
     next_ts = time.time() + (interval_minutes * 60)
-    with sqlite3.connect(DB_PATH) as conn:
+    with get_db(DB_PATH) as conn:
         conn.execute('UPDATE dca_orders SET next_execution_ts=? WHERE id=?', (next_ts, order_id))
         conn.commit()
 
 def cancel_dca_order(chat_id: str, token: str):
-    with sqlite3.connect(DB_PATH) as conn:
+    with get_db(DB_PATH) as conn:
         conn.execute("UPDATE dca_orders SET status='CANCELLED' WHERE chat_id=? AND token_address=? AND status='ACTIVE'", (chat_id, token))
         conn.commit()
 

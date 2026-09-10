@@ -1,5 +1,5 @@
 import time
-import sqlite3
+from core.db import get_db
 import os
 import json
 import urllib.request
@@ -26,7 +26,7 @@ def get_real_price(token_address: str) -> float:
     return 0.0
 
 def init_watchlist_db():
-    with sqlite3.connect(DB_PATH) as conn:
+    with get_db(DB_PATH) as conn:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS watchlist (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +40,7 @@ def init_watchlist_db():
 
 def add_watchlist_alert(chat_id: str, token_address: str, target_price: float, direction: str) -> int:
     init_watchlist_db()
-    with sqlite3.connect(DB_PATH) as conn:
+    with get_db(DB_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO watchlist (chat_id, token_address, target_price, direction, status) VALUES (?, ?, ?, ?, 'PENDING')",
@@ -50,8 +50,8 @@ def add_watchlist_alert(chat_id: str, token_address: str, target_price: float, d
 
 def get_active_watchlist(chat_id: str = None) -> list:
     init_watchlist_db()
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
+    with get_db(DB_PATH) as conn:
+        
         cursor = conn.cursor()
         if chat_id:
             cursor.execute("SELECT * FROM watchlist WHERE status = 'PENDING' AND chat_id = ?", (chat_id,))
@@ -60,7 +60,7 @@ def get_active_watchlist(chat_id: str = None) -> list:
         return [dict(row) for row in cursor.fetchall()]
 
 def mark_alert_triggered(alert_id: int):
-    with sqlite3.connect(DB_PATH) as conn:
+    with get_db(DB_PATH) as conn:
         conn.execute("UPDATE watchlist SET status = 'TRIGGERED' WHERE id = ?", (alert_id,))
 
 class WatchlistEngine:

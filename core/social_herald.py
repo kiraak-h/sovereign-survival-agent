@@ -1,5 +1,5 @@
 import os
-import sqlite3
+from core.db import get_db
 import tweepy
 from google import genai
 from typing import Dict, Any
@@ -35,7 +35,7 @@ class SovereignHerald:
         stats = {"total_revenue_eth": 0.0, "total_users": 0}
         
         try:
-            with sqlite3.connect("treasury_ledger.db") as conn:
+            with get_db("treasury_ledger.db") as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT SUM(amount_eth) FROM treasury_logs")
                 row = cursor.fetchone()
@@ -45,7 +45,7 @@ class SovereignHerald:
             pass
             
         try:
-            with sqlite3.connect("sniper_wallets.db") as conn:
+            with get_db("sniper_wallets.db") as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT COUNT(*) FROM users")
                 row = cursor.fetchone()

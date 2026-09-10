@@ -17,3 +17,4 @@ tweepy>=4.14.0
 google-genai
 websockets>=12.0
 jinja2>=3.0
+psycopg2-binary>=2.9.9

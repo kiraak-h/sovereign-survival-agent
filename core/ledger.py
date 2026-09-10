@@ -1,4 +1,4 @@
-import sqlite3
+from core.db import get_db
 import secrets
 from pathlib import Path
 
@@ -8,7 +8,7 @@ class PrepaidLedger:
         self._init_db()
         
     def _init_db(self):
-        with sqlite3.connect(self.db_path) as conn:
+        with get_db(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS api_keys (
@@ -36,7 +36,7 @@ class PrepaidLedger:
 
     def save_permit(self, permit_data: dict) -> bool:
         """Saves a verified EIP-2612 permit to the database so the sweeper daemon can cash it later."""
-        with sqlite3.connect(self.db_path) as conn:
+        with get_db(self.db_path) as conn:
             try:
                 conn.execute("""
                     INSERT INTO unclaimed_permits 
@@ -51,21 +51,21 @@ class PrepaidLedger:
                     permit_data.get("signature")
                 ))
                 return True
-            except sqlite3.IntegrityError:
+            except Exception:
                 return False
             
     def generate_key(self, client_name: str, initial_deposit_usdc: float, tx_hash: str) -> str:
         api_key = f"sov_live_{secrets.token_hex(16)}"
-        with sqlite3.connect(self.db_path) as conn:
+        with get_db(self.db_path) as conn:
             try:
                 conn.execute('INSERT INTO api_keys (api_key, client_name, balance_usdc, tx_hash) VALUES (?, ?, ?, ?)',
                              (api_key, client_name, initial_deposit_usdc, tx_hash))
-            except sqlite3.IntegrityError:
+            except Exception:
                 raise ValueError("Transaction hash already used or invalid.")
         return api_key
         
     def charge_audit(self, api_key: str, fee_usdc: float) -> tuple[bool, str]:
-        with sqlite3.connect(self.db_path) as conn:
+        with get_db(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT balance_usdc FROM api_keys WHERE api_key = ?', (api_key,))
             row = cursor.fetchone()
@@ -83,7 +83,7 @@ class PrepaidLedger:
             return True, "Payment successful"
 
     def get_balance(self, api_key: str) -> float:
-        with sqlite3.connect(self.db_path) as conn:
+        with get_db(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT balance_usdc FROM api_keys WHERE api_key = ?', (api_key,))
             row = cursor.fetchone()

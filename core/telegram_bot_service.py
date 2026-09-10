@@ -351,13 +351,13 @@ class TelegramBotService:
             self.send_message(f"❌ Error: {e}", chat_id)
 
     def _handle_status(self, chat_id: str):
-        import sqlite3
+        from core.db import get_db
         total_web2_usdc = 0.0
         total_web3_usdc = 0.0
         pending_count = 0
         try:
-            with sqlite3.connect("treasury_ledger.db") as conn:
-                conn.row_factory = sqlite3.Row
+            with get_db("treasury_ledger.db") as conn:
+                
                 cursor = conn.cursor()
                 cursor.execute("SELECT SUM(balance_usdc) FROM api_keys")
                 row = cursor.fetchone()
