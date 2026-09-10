@@ -7,33 +7,40 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 IS_PG = DATABASE_URL and DATABASE_URL.startswith("postgres")
 
 _pg_pool = None
+_fallback_to_sqlite = False
 
 def get_pg_pool():
-    global _pg_pool
+    global _pg_pool, _fallback_to_sqlite
+    
+    if _fallback_to_sqlite:
+        return None
+        
     if _pg_pool is None and IS_PG:
         import psycopg2
         from psycopg2.pool import SimpleConnectionPool
         
-        # Render internal DNS might take a few seconds to resolve newly created databases
-        retries = 10
+        logging.warning(f"[*] Attempting to connect to PostgreSQL...")
+        retries = 20
         while retries > 0:
             try:
                 _pg_pool = SimpleConnectionPool(1, 20, DATABASE_URL)
+                logging.warning("[+] Successfully connected to PostgreSQL!")
                 break
-            except psycopg2.OperationalError as e:
+            except Exception as e:
                 logging.warning(f"[!] PostgreSQL not ready yet, retrying in 5 seconds... ({e})")
                 time.sleep(5)
                 retries -= 1
         
         if _pg_pool is None:
-            raise Exception("Failed to connect to PostgreSQL after multiple retries. Please check DATABASE_URL.")
+            logging.error("[-] Failed to connect to PostgreSQL after multiple retries. FALLING BACK TO SQLITE.")
+            _fallback_to_sqlite = True
             
     return _pg_pool
 
 @contextlib.contextmanager
 def get_db(db_path):
-    if IS_PG:
-        pool = get_pg_pool()
+    pool = get_pg_pool()
+    if pool is not None:
         conn = pool.getconn()
         wrapper = PGConnectionWrapper(conn)
         try:
