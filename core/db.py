@@ -2,6 +2,7 @@ import os
 import time
 import contextlib
 import logging
+import re
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 IS_PG = DATABASE_URL and DATABASE_URL.startswith("postgres")
@@ -19,7 +20,7 @@ def get_pg_pool():
         import psycopg2
         from psycopg2.pool import SimpleConnectionPool
         
-        logging.warning(f"[*] Attempting to connect to PostgreSQL...")
+        logging.warning("[*] Attempting to connect to PostgreSQL...")
         retries = 20
         while retries > 0:
             try:
@@ -97,7 +98,8 @@ class PGConnectionWrapper:
         return self
     def execute(self, query, params=()):
         q = query.replace("?", "%s")
-        q = q.replace("AUTOINCREMENT", "SERIAL")
+        # Fix: PostgreSQL syntax is SERIAL PRIMARY KEY, not INTEGER PRIMARY KEY SERIAL
+        q = re.sub(r'INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT', 'SERIAL PRIMARY KEY', q, flags=re.IGNORECASE)
         self.cur.execute(q, params)
         return self
     def fetchone(self):
