@@ -863,7 +863,7 @@ class TelegramBotService:
                 entry_price = get_entry_price(chat_id, token)
                 current_price = get_real_price(token)
                 
-                caption = f"✅ <b>Sell Executed!</b>\\n\\nDumped {pct}% of <b>{token}</b>.\\nTx: <code>{result['tx_hash']}</code>"
+                caption = f"✅ <b>Sell Executed!</b>\n\nDumped {pct}% of <b>{token}</b>.\nTx: <code>{result['tx_hash']}</code>"
                 
                 if entry_price > 0 and current_price > 0:
                     pnl_pct = ((current_price - entry_price) / entry_price) * 100
@@ -886,14 +886,14 @@ class TelegramBotService:
         if len(parts) == 1:
             targets = get_copy_targets(chat_id)
             if not targets:
-                return self.send_message("🦇 <b>Vampire Copy Trading</b>\\n\\nYou have no active targets.\\n\\n<b>Add a target:</b>\\n<code>/copy [ADDRESS] [MAX_SPEND_ETH]</code>", chat_id)
+                return self.send_message("🦇 <b>Vampire Copy Trading</b>\n\nYou have no active targets.\n\n<b>Add a target:</b>\n<code>/copy [ADDRESS] [MAX_SPEND_ETH]</code>", chat_id)
                 
-            msg = "🦇 <b>Your Vampire Targets:</b>\\n\\n"
+            msg = "🦇 <b>Your Vampire Targets:</b>\n\n"
             keyboard = {"inline_keyboard": []}
             for idx, t in enumerate(targets):
                 addr = t['target_address']
                 status = "🟢 ACTIVE" if t['is_active'] else "🔴 PAUSED"
-                msg += f"{idx+1}. <code>{addr}</code>\\n   Spend: {t['max_spend_eth']} ETH | {status}\\n\\n"
+                msg += f"{idx+1}. <code>{addr}</code>\n   Spend: {t['max_spend_eth']} ETH | {status}\n\n"
                 
                 action = "pause" if t['is_active'] else "resume"
                 keyboard["inline_keyboard"].append([
@@ -918,7 +918,7 @@ class TelegramBotService:
         from server import _copy_engine
         _copy_engine.load_targets_from_db()
         
-        self.send_message(f"🦇 <b>Vampire Copy Trading Activated!</b>\\n\\nTarget: <code>{target}</code>\\nMax Spend: {max_spend} ETH per trade\\n\\n<i>Monitoring mempool for target transactions...</i>", chat_id)
+        self.send_message(f"🦇 <b>Vampire Copy Trading Activated!</b>\n\nTarget: <code>{target}</code>\nMax Spend: {max_spend} ETH per trade\n\n<i>Monitoring mempool for target transactions...</i>", chat_id)
     def _handle_sniper(self, cmd_text: str, chat_id: str):
         parts = cmd_text.split()
         if len(parts) < 2:
