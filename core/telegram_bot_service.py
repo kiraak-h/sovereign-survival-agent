@@ -173,6 +173,9 @@ class TelegramBotService:
             self._handle_referrals(chat_id)
         elif cmd_text.startswith("/mev"):
             self._handle_mev(cmd_text, chat_id)
+        elif cmd_text.startswith("/hunt"):
+            self._handle_hunt(chat_id)
+            self._handle_mev(cmd_text, chat_id)
         elif cmd_text.startswith("/start"):
             referrer_id = None
             if " ref_" in cmd_text:
@@ -495,6 +498,8 @@ class TelegramBotService:
             self.handle_command("/referrals", chat_id)
         elif data == "menu_mev":
             self.handle_command("/mev", chat_id)
+        elif data == "menu_hunt":
+            self.handle_command("/hunt", chat_id)
         elif data == "menu_back":
             self.handle_command("/start", chat_id)
         elif data == "menu_refresh":
@@ -896,6 +901,7 @@ class TelegramBotService:
                     {"text": f"Delete {addr[:6]}", "callback_data": f"copy_del_{addr}"}
                 ])
                 
+            keyboard["inline_keyboard"].append([{"text": "🐺 Auto-Hunt Alpha", "callback_data": "menu_hunt"}])
             keyboard["inline_keyboard"].append([{"text": "🔙 Back", "callback_data": "menu_back"}])
             return self.send_message(msg, chat_id, reply_markup=keyboard)
             
@@ -1036,6 +1042,20 @@ class TelegramBotService:
             self.send_message(f"✅ <b>MEV Bribe Updated!</b>\n\nEvery transaction will now include a {tip} ETH tip to the block builder.", chat_id)
         except ValueError:
             self.send_message("❌ Invalid amount.", chat_id)
+
+    def _handle_hunt(self, chat_id: str):
+        self.send_message("🐺 <i>Alpha Hunt Initiated...</i>\n\nQuerying global analytics API for highly profitable Smart Money wallets on Base...", chat_id)
+        
+        try:
+            from core.alpha_hunter import alpha_hunter_engine
+            injected = alpha_hunter_engine.execute_hunt(chat_id)
+            
+            if injected > 0:
+                self.send_message(f"🐺 **Alpha Hunt Complete!**\n\nScanned the network and found <b>{injected}</b> highly profitable Smart Money addresses (Win Rate > 70%).\n\n✅ <i>Successfully injected into Vampire Copy Engine!</i>\n\nType <code>/copy</code> to view your new targets.", chat_id)
+            else:
+                self.send_message("🐺 <b>Alpha Hunt Complete!</b>\n\nNo new profitable wallets found that pass our strict MEV filters. Try again later.", chat_id)
+        except Exception as e:
+            self.send_message(f"❌ Alpha Hunt Error: {e}", chat_id)
 
     def _handle_dca(self, cmd_text: str, chat_id: str):
         parts = cmd_text.split()
