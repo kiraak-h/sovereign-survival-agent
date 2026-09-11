@@ -22,7 +22,7 @@ class AlphaHunter:
 
         query = '''
         query TopTraders {
-          EVM(dataset: combined, network: base) {
+          EVM(dataset: realtime, network: base) {
             DEXTrades(
               limit: {count: 50}
               orderBy: {descending: Trade_Buy_AmountInUSD}
