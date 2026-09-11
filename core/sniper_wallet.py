@@ -19,34 +19,38 @@ cipher = Fernet(MASTER_KEY.encode())
 DB_PATH = "sniper_wallets.db"
 
 def init_db():
+    from core.db import get_db
     with get_db(DB_PATH) as conn:
         conn.execute('''CREATE TABLE IF NOT EXISTS users
                         (chat_id TEXT PRIMARY KEY, 
                          wallet_address TEXT, 
                          encrypted_private_key TEXT)''')
-        # Migration: Add referrer tracking
-        try:
+                         
+    try:
+        with get_db(DB_PATH) as conn:
             conn.execute('ALTER TABLE users ADD COLUMN referrer_id TEXT')
             conn.execute('ALTER TABLE users ADD COLUMN referral_rewards_eth REAL DEFAULT 0.0')
-        except Exception:
-            pass # Columns already exist
-            
-        try:
+    except Exception:
+        pass # Columns already exist
+        
+    try:
+        with get_db(DB_PATH) as conn:
             conn.execute('ALTER TABLE users ADD COLUMN mev_tip_eth REAL DEFAULT 0.0')
-        except Exception:
-            pass # Column already exists
-            
+    except Exception:
+        pass # Column already exists
+        
+    with get_db(DB_PATH) as conn:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS copy_targets (
-                id SERIAL PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 chat_id TEXT,
                 target_address TEXT,
                 max_spend_eth REAL,
                 is_active INTEGER DEFAULT 1
             )
         ''')
-
-            
+        
+    with get_db(DB_PATH) as conn:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS limit_orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,6 +61,7 @@ def init_db():
                 status TEXT DEFAULT 'PENDING'
             )
         ''')
+
 
 def get_or_create_wallet(chat_id: str, referrer_id: Optional[str] = None) -> dict:
     init_db()
